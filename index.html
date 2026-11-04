@@ -139,6 +139,8 @@ body.modo-cliente .pad{height:clamp(240px,40vh,380px)}
 .van-btn span{font-size:.8rem;color:var(--muted)}
 .van-btn[aria-pressed="true"]{border-color:var(--btn-bg);background:var(--soft)}
 .van-btn[disabled]{opacity:.5;cursor:not-allowed}
+.van-toggle{display:flex;align-items:center;gap:12px;border:0;background:none;padding:6px 4px;min-height:48px;cursor:pointer;font:inherit;color:inherit;text-align:left}
+.van-toggle .seta{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:10px;background:var(--soft);font-size:1.4rem;font-weight:700;line-height:1}
 .barra{height:10px;background:var(--soft);border-radius:999px;overflow:hidden}
 .barra i{display:block;height:100%;background:var(--btn-bg)}
 .item .acoes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -930,9 +932,11 @@ function renderVans(){
   app.innerHTML = shell(
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><div class="grow"><h2>Controle das vans</h2>' +
     '<p class="muted" style="margin:4px 0 0">Cada van leva ' + capVan() + ' pessoas (cliente mais acompanhantes). Quando lota, a próxima é liberada no check-in.</p></div>' +
-    '<button class="btn sec sm" id="vn-atualizar" type="button">Atualizar</button></div><div class="cont-grid" id="vn-cont"></div></section><div id="vn-corpo" class="stack">' + msg('Carregando...', 'info') + '</div>');
+    '<div class="acoes"><button class="btn sec sm" id="vn-expandir" type="button">Expandir todas</button><button class="btn sec sm" id="vn-recolher" type="button">Recolher todas</button><button class="btn sec sm" id="vn-atualizar" type="button">Atualizar</button></div></div><div class="cont-grid" id="vn-cont"></div></section><div id="vn-corpo" class="stack">' + msg('Carregando...', 'info') + '</div>');
   ligarShell();
   $('#vn-atualizar').addEventListener('click', atualizarVans);
+  $('#vn-expandir').addEventListener('click', function(){ S.vanFechada = {}; desenharVans(); });
+  $('#vn-recolher').addEventListener('click', function(){ S.vanFechada = {}; (S.vans || []).forEach(function(r){ S.vanFechada[r.van] = true; }); desenharVans(); });
   atualizarVans();
 }
 async function atualizarVans(){
@@ -945,23 +949,28 @@ async function atualizarVans(){
   timerCk = setTimeout(function(){ if (S.view === 'vans') atualizarVans(); }, 20000);
 }
 function desenharVans(){
+  S.vanFechada = S.vanFechada || {};
   var cap = capVan(), rows = S.vans || [], occ = ocupacaoVans(rows), mx = maiorVan(occ), v, html = '', lotadas = 0, pessoas = 0, emUso = 0;
   for (v = 1; v <= mx; v++){
     var lista = rows.filter(function(r){ return r.van === v; }), usados = occ[v] || 0;
     if (!lista.length) continue;
     emUso++; pessoas += usados; if (usados >= cap) lotadas++;
-    html += '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Van ' + v + '</h3>' +
+    var fechada = !!S.vanFechada[v];
+    html += '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><button type="button" class="van-toggle" data-van-toggle="' + v + '" aria-expanded="' + (!fechada) + '" aria-label="' + (fechada ? 'Maximizar' : 'Minimizar') + ' Van ' + v + '"><span class="seta">' + (fechada ? '+' : '-') + '</span><h3 style="margin:0">Van ' + v + '</h3></button>' +
       '<span class="tag ' + (usados >= cap ? 'etapa-van' : 'etapa-chegou') + '">' + (usados >= cap ? 'Lotada' : (cap - usados) + ' vagas') + '</span></div>' +
       '<div class="barra"><i style="width:' + Math.min(100, Math.round(usados * 100 / cap)) + '%"></i></div>' +
       '<p class="muted" style="margin:0">' + usados + ' de ' + cap + ' lugares ocupados</p>' +
-      '<div class="lista">' + lista.map(function(r){
+      (fechada ? '' : '<div class="lista">' + lista.map(function(r){
         var a = Number(r.acompanhantes) || 0;
         return '<div class="item"><div class="info"><b>' + esc(titulo(r.nome)) + '</b><span>' + (a ? '+' + a + (a === 1 ? ' acompanhante' : ' acompanhantes') : 'sem acompanhantes') + ' | ' + (1 + a) + (a ? ' pessoas' : ' pessoa') + ' | check-in ' + esc(fmtHora(r.embarque_em)) + '</span></div>' +
           (r.manual ? '<span class="tag manual">Cadastro manual</span>' : '') + (r.doc_gerado ? '<span class="tag etapa-van">Documento gerado</span>' : '') + '</div>';
-      }).join('') + '</div></section>';
+      }).join('') + '</div>') + '</section>';
   }
   $('#vn-cont').innerHTML = '<div class="cont"><b>' + emUso + '</b><span>Vans em uso</span></div><div class="cont"><b>' + lotadas + '</b><span>Vans lotadas</span></div><div class="cont"><b>' + pessoas + '</b><span>Pessoas nas vans</span></div>';
   $('#vn-corpo').innerHTML = html || msg('Nenhuma van com passageiros ainda.', 'info');
+  document.querySelectorAll('[data-van-toggle]').forEach(function(b){
+    b.addEventListener('click', function(){ var n = b.getAttribute('data-van-toggle'); S.vanFechada[n] = !S.vanFechada[n]; desenharVans(); });
+  });
 }
 
 /* ---------------- administração ---------------- */
@@ -1236,4 +1245,4 @@ init();
 </body>
 </html>
 
-<!-- build 2026-11-04 14:50 -->
+<!-- build 2026-11-04 16:50 -->
