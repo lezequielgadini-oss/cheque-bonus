@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#2f4858">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Cheque Bônus">
+<meta name="apple-mobile-web-app-title" content="Entrega de Cheques">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="format-detection" content="telephone=no">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232f4858'/%3E%3Cpolygon points='4,28 16,5 28,28' fill='%2318b68c'/%3E%3Cpolygon points='10,28 16,16 22,28' fill='%231e756a'/%3E%3C/svg%3E">
-<title>Cheque Bônus EPLENUM RESERVE</title>
+<title>ENTREGA DE CHEQUES EMAIS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
@@ -128,6 +128,19 @@ body.modo-cliente .pad{height:clamp(240px,40vh,380px)}
 .subtabs button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;min-height:42px;cursor:pointer;font-weight:700;color:var(--muted)}
 .subtabs button[aria-current="page"]{background:var(--btn-bg);border-color:var(--btn-bg);color:var(--btn-fg)}
 .tag.manual{background:var(--warn-bg);color:var(--warn-fg)}
+.modal-fundo{position:fixed;inset:0;background:rgba(19,12,14,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{width:min(560px,100%);max-height:90vh;overflow:auto}
+.stepper{display:flex;align-items:center;gap:14px}
+.stepper button{min-width:60px;min-height:60px;font-size:1.7rem;padding:0}
+.stepper output{font-family:var(--font-display);font-size:2.4rem;min-width:52px;text-align:center}
+.van-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.van-btn{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;min-height:80px;cursor:pointer;text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column;gap:2px}
+.van-btn b{font-size:1.05rem}
+.van-btn span{font-size:.8rem;color:var(--muted)}
+.van-btn[aria-pressed="true"]{border-color:var(--btn-bg);background:var(--soft)}
+.van-btn[disabled]{opacity:.5;cursor:not-allowed}
+.barra{height:10px;background:var(--soft);border-radius:999px;overflow:hidden}
+.barra i{display:block;height:100%;background:var(--btn-bg)}
 .item .acoes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .rolagem{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
 .tabela{width:100%;border-collapse:collapse;font-size:.86rem}
@@ -266,8 +279,8 @@ function $(s, r){ return (r || document).querySelector(s); }
 
 var S = {
   sb: null, user: null, papel: 'operador',
-  cfg: { empreendimento: 'EPLENUM RESERVE', empresa: 'Emais Urbanismo', valor_padrao: null, texto_complementar: '', responsavel: '' },
-  chk: { exigir: false, local: '' },
+  cfg: { empreendimento: '', empresa: 'Emais Urbanismo', valor_padrao: null, texto_complementar: '', responsavel: '' },
+  chk: { exigir: false, local: '', capacidade: 13 },
   ck: { lista: [], resultados: null, termo: '', filtro: 'todos' },
   at: { fila: [], res: null, termo: '', mapa: {} }, rel: [],
   view: 'busca', cliente: null, ultimo: null, pad: null, adminTab: 'base', imp: null
@@ -303,7 +316,7 @@ function renderSetup(){
 function renderLogin(erro){
   app.innerHTML = '<div class="wrap"><form id="f-login" class="card login stack" autocomplete="on">' +
     '<div class="faixa">' + mosaico(26, 28) + '</div>' +
-    '<div><h2>Cheque Bônus</h2><p class="muted" style="margin:4px 0 0">EPLENUM RESERVE. Acesso restrito à equipe autorizada.</p></div>' +
+    '<div><h2>Entrega de Cheques Emais</h2><p class="muted" style="margin:4px 0 0">Acesso restrito à equipe autorizada.</p></div>' +
     '<div><label for="email">E-mail</label><input id="email" type="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div>' +
     '<div><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required></div>' +
     '<div id="login-msg">' + (erro ? msg(erro, 'err') : '') + '</div>' +
@@ -391,7 +404,7 @@ async function entrar(user){
   var c = await S.sb.from('configuracoes').select('valor').eq('chave', 'documento').maybeSingle();
   if (c.data && c.data.valor) S.cfg = Object.assign(S.cfg, c.data.valor);
   var k = await S.sb.from('configuracoes').select('valor').eq('chave', 'checkin').maybeSingle();
-  if (k.data && k.data.valor) S.chk = Object.assign({ exigir: false, local: '' }, k.data.valor);
+  if (k.data && k.data.valor) S.chk = Object.assign({ exigir: false, local: '', capacidade: 13 }, k.data.valor);
   var ea = await S.sb.rpc('existe_admin');
   S.semAdmin = ea.error ? false : ea.data === false;
   S.view = S.papel === 'recepcao' ? 'checkin' : 'busca'; S.cliente = null;
@@ -401,11 +414,11 @@ function sair(){ S.sb.auth.signOut(); }
 
 /* ---------------- estrutura geral ---------------- */
 function shell(inner){
-  var aba = S.view === 'docs' ? 'docs' : (S.view === 'admin' ? 'admin' : (S.view === 'checkin' ? 'checkin' : 'busca'));
+  var aba = S.view === 'docs' ? 'docs' : (S.view === 'admin' ? 'admin' : (S.view === 'checkin' ? 'checkin' : (S.view === 'vans' ? 'vans' : 'busca')));
   function t(id, nome){ return '<button data-nav="' + id + '"' + (aba === id ? ' aria-current="page"' : '') + '>' + nome + '</button>'; }
   return '<header class="top"><div class="wrap topin">' +
-    '<div class="brand">' + mosaico(9, 30) + '<div><b>Cheque Bônus</b><small>' + esc(S.cfg.empreendimento) + '</small></div></div>' +
-    '<nav class="tabs" aria-label="Seções">' + (S.papel === 'recepcao' ? t('checkin', 'Check-in') : t('busca', 'Atendimento') + (S.papel === 'admin' ? t('checkin', 'Check-in') : '') + t('docs', 'Documentos') + (S.papel === 'admin' ? t('admin', 'Administração') : '')) + '</nav>' +
+    '<div class="brand">' + mosaico(9, 30) + '<div><b>ENTREGA DE CHEQUES EMAIS</b></div></div>' +
+    '<nav class="tabs" aria-label="Seções">' + (S.papel === 'recepcao' ? t('checkin', 'Check-in') + t('vans', 'Vans') : t('busca', 'Atendimento') + (S.papel === 'admin' ? t('checkin', 'Check-in') + t('vans', 'Vans') : '') + t('docs', 'Documentos') + (S.papel === 'admin' ? t('admin', 'Administração') : '')) + '</nav>' +
     '<div class="who"><span title="' + esc(S.user.email) + '">' + esc(S.user.email) + '</span><button class="ghost" id="sair">Sair</button></div>' +
     '</div></header><main class="wrap">' + bannerAdmin() + inner + '</main>';
 }
@@ -435,7 +448,8 @@ function ligarShell(){
 function render(){
   clearTimeout(timerCk);
   document.body.classList.remove('modo-cliente');
-  if (S.papel === 'recepcao'){ S.view = 'checkin'; return renderCheckin(); }
+  if (S.papel === 'recepcao'){ if (S.view !== 'vans') S.view = 'checkin'; return S.view === 'vans' ? renderVans() : renderCheckin(); }
+  if (S.view === 'vans' && S.papel === 'admin') return renderVans();
   if (S.view === 'checkin' && S.papel === 'admin') return renderCheckin();
   if (S.view === 'busca') return renderBusca();
   if (S.view === 'doc') return renderDoc();
@@ -452,6 +466,7 @@ function infoPessoa(x){
   if (x.telefone) p.push(x.telefone);
   if (x.corretor) p.push('Corretor: ' + x.corretor);
   if (x.embarque_em) p.push('check-in ' + fmtHora(x.embarque_em));
+  if (x.van) p.push('Van ' + x.van + (x.acompanhantes ? ' (+' + x.acompanhantes + ' acomp.)' : ''));
   return p.join(' | ');
 }
 function linhaAt(x){
@@ -541,7 +556,7 @@ function desenharAt(){
 
 /* ---------------- documento e assinatura ---------------- */
 function paragrafos(v){
-  var emp = S.cfg.empreendimento || 'EPLENUM RESERVE', empresa = S.cfg.empresa || 'Emais Urbanismo';
+  var emp = v.emp || '', empresa = S.cfg.empresa || 'Emais Urbanismo';
   var vv = v.valor ? ' no valor de ' + brl(v.valor) + ' (' + valorExtenso(v.valor) + ')' : '';
   var p = [];
   p.push('A ' + empresa + ' parabeniza ' + v.nome + (v.cpf ? ', portador(a) do CPF nº ' + fmtCPF(v.cpf) : '') + ', pela conquista do Cheque Bônus' + vv + '.');
@@ -553,10 +568,10 @@ function paragrafos(v){
 function lerFormDoc(){
   var c = S.cliente, ds = $('#data').value || hojeISO();
   var vtxt = $('#valor').value.trim();
-  return { nome: titulo(c.nome), cpf: c.cpf, valor: vtxt ? parseValor(vtxt) : null, dataISO: ds, data: dataISOparaDate(ds) };
+  return { emp: ($('#emp').value || '').trim(), nome: titulo(c.nome), cpf: c.cpf, valor: vtxt ? parseValor(vtxt) : null, dataISO: ds, data: dataISOparaDate(ds) };
 }
 function atualizarPapel(){
-  var v = lerFormDoc(), emp = S.cfg.empreendimento || 'EPLENUM RESERVE';
+  var v = lerFormDoc(), emp = v.emp || 'EMPREENDIMENTO';
   var primeiro = v.nome.split(' ')[0] || '';
   $('#papel').innerHTML = '<div class="faixa">' + mosaico(40, 34) + '</div><div class="corpo">' +
     '<div class="emp">' + esc(S.cfg.empresa || 'Emais Urbanismo') + '</div><h3>Parabenização</h3>' +
@@ -565,6 +580,10 @@ function atualizarPapel(){
     paragrafos(v).map(function(t){ return '<p>' + esc(t) + '</p>'; }).join('') +
     '<div class="rodape">Assinatura do(a) cliente abaixo da confirmação, na tela do tablet.</div></div>';
 }
+function empInicial(c){
+  var d = (c && c.dados) || {}, k = Object.keys(d).filter(function(x){ return norm(x).indexOf('empreendimento') >= 0 && String(d[x]).trim(); })[0];
+  return k ? String(d[k]).trim() : (S.cfg.empreendimento || '');
+}
 function renderDoc(){
   var c = S.cliente;
   if (!c){ S.view = 'busca'; return renderBusca(); }
@@ -572,6 +591,7 @@ function renderDoc(){
   app.innerHTML = shell(
     '<div class="row so-atendente" style="align-items:center"><button class="btn sec sm" id="voltar">Voltar</button><h2>Documento de ' + esc(titulo(c.nome)) + '</h2></div>' +
     '<div class="doc-grid"><section class="card stack so-atendente" id="c-dados"><h3>Dados do documento</h3>' +
+    '<div><label for="emp">Empreendimento</label><input id="emp" type="text" autocomplete="off" placeholder="Ex.: nome do empreendimento" value="' + esc(empInicial(c)) + '"></div>' +
     '<div><label for="valor">Valor do Cheque Bônus (R$)</label><input id="valor" type="text" inputmode="decimal" placeholder="Ex.: 1.500,00" value="' + esc(valorInput(inicial)) + '"></div>' +
     '<div><label for="data">Data de retirada</label><input id="data" type="date" value="' + esc(hojeISO()) + '"></div>' +
     '<button class="btn" id="modo-cliente" type="button">Entregar ao cliente para assinar</button>' +
@@ -584,6 +604,7 @@ function renderDoc(){
   $('#voltar').addEventListener('click', function(){ S.view = 'busca'; render(); });
   atualizarPapel();
   $('#valor').addEventListener('input', atualizarPapel);
+  $('#emp').addEventListener('input', atualizarPapel);
   $('#data').addEventListener('input', atualizarPapel);
   S.pad = criarPad($('#sig'), function(sujo){ $('#salvar').disabled = !sujo; $('#dica').style.display = sujo ? 'none' : ''; });
   $('#limpar').addEventListener('click', function(){ S.pad.limpar(); });
@@ -629,7 +650,7 @@ function criarPad(canvas, aoMudar){
 }
 function gerarPDF(d){
   var jsPDF = window.jspdf.jsPDF, doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  var W = 210, M = 22, emp = S.cfg.empreendimento || 'EPLENUM RESERVE', empresa = S.cfg.empresa || 'Emais Urbanismo';
+  var W = 210, M = 22, emp = d.emp || '', empresa = S.cfg.empresa || 'Emais Urbanismo';
   var cores = [[24,182,140],[30,117,106],[78,216,176],[45,140,126],[47,72,88]], b = 18, h = 16;
   for (var i = 0; i < 30; i++){
     var x0 = i * b / 2 - 9; doc.setFillColor.apply(doc, cores[i % cores.length]);
@@ -664,11 +685,12 @@ async function salvar(){
   var btn = $('#salvar'), out = $('#doc-msg'), c = S.cliente;
   if (S.pad.vazio()){ out.innerHTML = msg('Peça ao cliente para assinar na área indicada.', 'warn'); return; }
   var f = lerFormDoc();
+  if (!f.emp){ out.innerHTML = msg('Informe o empreendimento do cheque.', 'warn'); return; }
   if ($('#valor').value.trim() && (f.valor == null || f.valor <= 0)){ out.innerHTML = msg('O valor informado não é válido.', 'warn'); return; }
   btn.disabled = true; btn.textContent = 'Salvando...'; out.innerHTML = '';
   try {
     var id = novoId(), protocolo = id.slice(0, 8).toUpperCase(), base = S.user.id + '/' + id;
-    var pdf = gerarPDF({ nome: f.nome, cpf: f.cpf, valor: f.valor, data: f.data, protocolo: protocolo,
+    var pdf = gerarPDF({ emp: f.emp, nome: f.nome, cpf: f.cpf, valor: f.valor, data: f.data, protocolo: protocolo,
       sigURL: S.pad.dataURL(), sigW: S.pad.w(), sigH: S.pad.h() });
     var sig = await S.pad.blob();
     var up1 = await S.sb.storage.from(BUCKET).upload(base + '.pdf', pdf, { contentType: 'application/pdf' });
@@ -677,7 +699,7 @@ async function salvar(){
     if (up2.error) throw up2.error;
     var ins = await S.sb.from('documentos_bonus').insert({
       id: id, cliente_id: c.id, cpf: c.cpf, nome: f.nome, valor_bonus: f.valor,
-      empreendimento: S.cfg.empreendimento || 'EPLENUM RESERVE', data_retirada: f.dataISO,
+      empreendimento: f.emp, data_retirada: f.dataISO,
       assinatura_path: base + '-assinatura.png', pdf_path: base + '.pdf'
     });
     if (ins.error) throw ins.error;
@@ -744,24 +766,91 @@ async function renderDocs(){
   desenhar();
 }
 
-/* ---------------- check-in (recepção) ---------------- */
+/* ---------------- check-in (recepção) e vans ---------------- */
 function fmtHora(iso){ return iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''; }
 function fmtDH(iso){ return iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''; }
+function capVan(){ var n = Math.floor(Number(S.chk.capacidade)); return n > 0 ? n : 13; }
+function ocupacaoVans(rows, ignorarId){
+  var m = {};
+  (rows || []).forEach(function(r){
+    if (ignorarId != null && String(r.cliente_id) === String(ignorarId)) return;
+    m[r.van] = (m[r.van] || 0) + 1 + (Number(r.acompanhantes) || 0);
+  });
+  return m;
+}
+function maiorVan(m){ var mx = 0; Object.keys(m).forEach(function(k){ if (Number(k) > mx) mx = Number(k); }); return mx; }
+async function carregarVans(){
+  var r = await S.sb.rpc('controle_vans');
+  if (!r.error) S.vans = r.data || [];
+  return r;
+}
 function etapaCk(x){ return x.doc_gerado ? 'doc' : (x.embarque_em ? 'aguarda' : 'nao'); }
 var ROTULO_CK = { doc: 'Documento gerado', aguarda: 'Check-in feito', nao: 'Sem check-in' };
 var CLASSE_CK = { doc: 'etapa-van', aguarda: 'etapa-chegou', nao: '' };
 function linhaCk(x){
   var e = etapaCk(x), id = ' data-id="' + esc(x.cliente_id) + '"', acoes = '';
-  if (e === 'nao') acoes = '<button class="btn" data-ck="embarque"' + id + '>Fazer check-in</button>';
-  else if (e === 'aguarda') acoes = '<button class="btn sec sm" data-ck="desfazer_embarque"' + id + '>Desfazer check-in</button>';
+  if (e === 'nao') acoes = '<button class="btn" data-ck="abrir"' + id + '>Fazer check-in</button>';
+  else if (e === 'aguarda') acoes = '<button class="btn sec sm" data-ck="editar"' + id + '>Alterar van</button><button class="btn sec sm" data-ck="desfazer_embarque"' + id + '>Desfazer check-in</button>';
   return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x)) + '</span></div>' +
     (x.manual ? '<span class="tag manual">Cadastro manual</span>' : '') +
     '<span class="tag ' + CLASSE_CK[e] + '">' + ROTULO_CK[e] + '</span><div class="acoes">' + acoes + '</div></div>';
 }
+/* janela do check-in: acompanhantes e van */
+async function abrirEmbarque(x, aoFim){
+  var cap = capVan(), acomp = Number(x.acompanhantes) || 0, vanSel = x.van || null;
+  await carregarVans();
+  var fundo = document.createElement('div'); fundo.className = 'modal-fundo';
+  fundo.innerHTML = '<div class="modal card stack" role="dialog" aria-modal="true"><h2>Check-in de ' + esc(x.nome) + '</h2>' +
+    '<div><label>Quantos acompanhantes vão com o cliente no tour?</label>' +
+    '<div class="stepper"><button class="btn sec" id="a-menos" type="button" aria-label="Menos um">-</button><output id="a-val">0</output><button class="btn sec" id="a-mais" type="button" aria-label="Mais um">+</button></div>' +
+    '<p class="muted" id="a-total" style="margin:6px 0 0"></p></div>' +
+    '<div><label>Van</label><div class="van-grid" id="van-grid"></div></div>' +
+    '<div id="mdl-msg"></div><div class="row"><button class="btn" id="mdl-ok" type="button">Confirmar check-in</button><button class="btn sec" id="mdl-cancel" type="button">Cancelar</button></div></div>';
+  document.body.appendChild(fundo);
+  function fechar(){ fundo.remove(); }
+  function pintar(){
+    var occ = ocupacaoVans(S.vans, x.cliente_id), seats = 1 + acomp, n = maiorVan(occ) + 1, primeiro = null, lista = [], v;
+    function livres(u){ return cap - (occ[u] || 0); }
+    for (v = 1; v <= n; v++){
+      var usados = occ[v] || 0, cabe = livres(v) >= seats, anterior = false, u;
+      for (u = 1; u < v; u++) if (livres(u) >= seats) anterior = true;
+      var ok = cabe && (usados > 0 || !anterior);
+      var nota = ok ? (livres(v) + ' vagas') : (livres(v) <= 0 ? 'Lotada' : (cabe ? 'Complete a anterior' : 'Sem vaga para ' + seats));
+      lista.push({ v: v, usados: usados, ok: ok, nota: nota });
+      if (ok && primeiro == null) primeiro = v;
+    }
+    var atual = lista.filter(function(l){ return l.v === vanSel; })[0];
+    if (!atual || !atual.ok) vanSel = primeiro;
+    $('#a-val').textContent = acomp;
+    $('#a-total').textContent = 'Total na van: ' + seats + (seats === 1 ? ' pessoa (só o cliente)' : ' pessoas (cliente + ' + acomp + ')') + '. Cada van leva ' + cap + '.';
+    $('#a-menos').disabled = acomp <= 0; $('#a-mais').disabled = acomp >= cap - 1;
+    $('#van-grid').innerHTML = lista.map(function(l){
+      return '<button class="van-btn" type="button" data-van="' + l.v + '"' + (l.ok ? '' : ' disabled') + ' aria-pressed="' + (l.v === vanSel) + '"><b>Van ' + l.v + '</b><span>' + l.usados + ' de ' + cap + ' lugares</span><span>' + esc(l.nota) + '</span></button>';
+    }).join('');
+    $('#van-grid').querySelectorAll('[data-van]').forEach(function(b){
+      b.addEventListener('click', function(){ vanSel = Number(b.getAttribute('data-van')); pintar(); });
+    });
+    $('#mdl-ok').disabled = vanSel == null;
+  }
+  $('#a-menos').addEventListener('click', function(){ if (acomp > 0){ acomp--; pintar(); } });
+  $('#a-mais').addEventListener('click', function(){ if (acomp < cap - 1){ acomp++; pintar(); } });
+  $('#mdl-cancel').addEventListener('click', fechar);
+  $('#mdl-ok').addEventListener('click', async function(){
+    var b = $('#mdl-ok'); b.disabled = true; $('#mdl-msg').innerHTML = msg('Registrando...', 'info');
+    var r = await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(x.cliente_id), p_etapa: 'embarque', p_van: vanSel, p_acompanhantes: acomp });
+    if (r.error){
+      $('#mdl-msg').innerHTML = msg(traduzErro(r.error), 'err');
+      await carregarVans(); pintar(); return;
+    }
+    fechar(); toast('Check-in registrado na Van ' + vanSel);
+    if (aoFim) aoFim();
+  });
+  pintar();
+}
 function renderCheckin(){
   var local = String(S.chk.local || '').trim();
   app.innerHTML = shell(
-    '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:flex-end"><div class="grow"><h2>Check-in do evento</h2><p class="muted" style="margin:4px 0 0">Busque o cliente pelo nome (basta o primeiro) ou pelo CPF e toque em Fazer check-in.' +
+    '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:flex-end"><div class="grow"><h2>Check-in do evento</h2><p class="muted" style="margin:4px 0 0">Busque o cliente pelo nome (basta o primeiro) ou pelo CPF e toque em Fazer check-in. Pergunte quantas pessoas vão com ele no tour.' +
     (local ? ' Retirada do cheque: <b>' + esc(local) + '</b>.' : '') + '</p></div><button class="btn sec" id="ck-manual" type="button">Cadastro manual</button></div>' +
     '<div><label for="ck-busca">Nome ou CPF</label><input id="ck-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.ck.termo) + '"></div>' +
     '<div id="ck-manual-box"></div><div id="ck-res"></div></section>' +
@@ -778,32 +867,34 @@ function renderCheckin(){
   $('#ck-manual').addEventListener('click', function(){
     var tm = S.ck.termo.trim();
     abrirManual('#ck-manual-box', /\d/.test(tm) ? '' : tm, async function(row){
-      var r = await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(row.id), p_etapa: 'embarque', p_van: null });
-      toast(r.error ? 'Cadastrado, mas o check-in falhou: ' + traduzErro(r.error) : 'Cadastrado e check-in feito');
-      S.ck.termo = ''; $('#ck-busca').value = ''; S.ck.resultados = null; atualizarCk();
+      S.ck.termo = row.nome; $('#ck-busca').value = row.nome; toast('Cliente cadastrado manualmente');
+      await atualizarCk();
+      abrirEmbarque({ cliente_id: row.id, nome: titulo(row.nome) }, atualizarCk);
     });
   });
   atualizarCk();
 }
 async function atualizarCk(){
-  var meu = ++seqCk, jobs = [S.sb.rpc('lista_checkins')], buscou = S.ck.termo.trim().length >= 3;
+  var meu = ++seqCk, jobs = [S.sb.rpc('lista_checkins'), S.sb.rpc('controle_vans')], buscou = S.ck.termo.trim().length >= 3;
   if (buscou) jobs.push(S.sb.rpc('buscar_para_checkin', { p_termo: S.ck.termo }));
   var res = await Promise.all(jobs);
   if (meu !== seqCk || S.view !== 'checkin' || !$('#ck-lista')) return;
   if (res[0].error){ $('#ck-lista').innerHTML = msg('Erro ao carregar a lista: ' + traduzErro(res[0].error), 'err'); return; }
   S.ck.lista = res[0].data || [];
-  S.ck.resultados = buscou ? (res[1].error ? [] : (res[1].data || [])) : null;
-  if (buscou && res[1].error) toast('Erro na busca: ' + traduzErro(res[1].error));
+  if (!res[1].error) S.vans = res[1].data || [];
+  S.ck.resultados = buscou ? (res[2].error ? [] : (res[2].data || [])) : null;
+  if (buscou && res[2].error) toast('Erro na busca: ' + traduzErro(res[2].error));
   desenharCk();
   clearTimeout(timerCk);
   timerCk = setTimeout(function(){ if (S.view === 'checkin') atualizarCk(); }, 20000);
 }
 function desenharCk(){
   if (!$('#ck-lista')) return;
-  var l = S.ck.lista, n = { aguarda: 0, doc: 0 };
-  l.forEach(function(x){ var e = etapaCk(x); if (n[e] != null) n[e]++; });
+  var l = S.ck.lista, n = { aguarda: 0, doc: 0 }, pessoas = 0;
+  l.forEach(function(x){ var e = etapaCk(x); if (n[e] != null) n[e]++; pessoas += 1 + (Number(x.acompanhantes) || 0); });
   $('#ck-cont').innerHTML =
     '<div class="cont"><b>' + l.length + '</b><span>Check-ins feitos</span></div>' +
+    '<div class="cont"><b>' + pessoas + '</b><span>Pessoas no tour</span></div>' +
     '<div class="cont"><b>' + n.aguarda + '</b><span>Aguardando documento</span></div>' +
     '<div class="cont"><b>' + n.doc + '</b><span>Documento gerado</span></div>';
   var filtros = [['todos', 'Todos'], ['aguarda', 'Aguardando documento'], ['doc', 'Documento gerado']];
@@ -822,11 +913,55 @@ function desenharCk(){
   });
 }
 async function acaoCk(id, etapa){
+  if (etapa === 'abrir' || etapa === 'editar'){
+    var x = S.ck.lista.concat(S.ck.resultados || []).filter(function(y){ return String(y.cliente_id) === String(id); })[0];
+    if (!x) return;
+    return abrirEmbarque({ cliente_id: x.cliente_id, nome: titulo(x.nome), van: x.van, acompanhantes: x.acompanhantes }, atualizarCk);
+  }
   document.querySelectorAll('[data-ck]').forEach(function(b){ b.disabled = true; });
-  var r = await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(id), p_etapa: etapa, p_van: null });
+  var r = await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(id), p_etapa: etapa, p_van: null, p_acompanhantes: 0 });
   if (r.error) toast('Não foi possível registrar: ' + traduzErro(r.error));
-  else toast(etapa === 'embarque' ? 'Check-in registrado' : 'Check-in desfeito');
+  else toast('Check-in desfeito');
   await atualizarCk();
+}
+
+/* ---------------- controle das vans ---------------- */
+function renderVans(){
+  app.innerHTML = shell(
+    '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><div class="grow"><h2>Controle das vans</h2>' +
+    '<p class="muted" style="margin:4px 0 0">Cada van leva ' + capVan() + ' pessoas (cliente mais acompanhantes). Quando lota, a próxima é liberada no check-in.</p></div>' +
+    '<button class="btn sec sm" id="vn-atualizar" type="button">Atualizar</button></div><div class="cont-grid" id="vn-cont"></div></section><div id="vn-corpo" class="stack">' + msg('Carregando...', 'info') + '</div>');
+  ligarShell();
+  $('#vn-atualizar').addEventListener('click', atualizarVans);
+  atualizarVans();
+}
+async function atualizarVans(){
+  var meu = ++seqCk, r = await S.sb.rpc('controle_vans');
+  if (meu !== seqCk || S.view !== 'vans' || !$('#vn-corpo')) return;
+  if (r.error){ $('#vn-corpo').innerHTML = msg('Erro ao carregar as vans: ' + traduzErro(r.error), 'err'); return; }
+  S.vans = r.data || [];
+  desenharVans();
+  clearTimeout(timerCk);
+  timerCk = setTimeout(function(){ if (S.view === 'vans') atualizarVans(); }, 20000);
+}
+function desenharVans(){
+  var cap = capVan(), rows = S.vans || [], occ = ocupacaoVans(rows), mx = maiorVan(occ), v, html = '', lotadas = 0, pessoas = 0, emUso = 0;
+  for (v = 1; v <= mx; v++){
+    var lista = rows.filter(function(r){ return r.van === v; }), usados = occ[v] || 0;
+    if (!lista.length) continue;
+    emUso++; pessoas += usados; if (usados >= cap) lotadas++;
+    html += '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Van ' + v + '</h3>' +
+      '<span class="tag ' + (usados >= cap ? 'etapa-van' : 'etapa-chegou') + '">' + (usados >= cap ? 'Lotada' : (cap - usados) + ' vagas') + '</span></div>' +
+      '<div class="barra"><i style="width:' + Math.min(100, Math.round(usados * 100 / cap)) + '%"></i></div>' +
+      '<p class="muted" style="margin:0">' + usados + ' de ' + cap + ' lugares ocupados</p>' +
+      '<div class="lista">' + lista.map(function(r){
+        var a = Number(r.acompanhantes) || 0;
+        return '<div class="item"><div class="info"><b>' + esc(titulo(r.nome)) + '</b><span>' + (a ? '+' + a + (a === 1 ? ' acompanhante' : ' acompanhantes') : 'sem acompanhantes') + ' | ' + (1 + a) + (a ? ' pessoas' : ' pessoa') + ' | check-in ' + esc(fmtHora(r.embarque_em)) + '</span></div>' +
+          (r.manual ? '<span class="tag manual">Cadastro manual</span>' : '') + (r.doc_gerado ? '<span class="tag etapa-van">Documento gerado</span>' : '') + '</div>';
+      }).join('') + '</div></section>';
+  }
+  $('#vn-cont').innerHTML = '<div class="cont"><b>' + emUso + '</b><span>Vans em uso</span></div><div class="cont"><b>' + lotadas + '</b><span>Vans lotadas</span></div><div class="cont"><b>' + pessoas + '</b><span>Pessoas nas vans</span></div>';
+  $('#vn-corpo').innerHTML = html || msg('Nenhuma van com passageiros ainda.', 'info');
 }
 
 /* ---------------- administração ---------------- */
@@ -925,14 +1060,14 @@ async function importar(){
 function adminConfig(){
   var c = S.cfg;
   $('#admin-corpo').innerHTML = '<section class="card stack"><h2>Configurações do documento</h2>' +
-    '<div class="row"><div class="grow"><label for="c-emp">Empreendimento</label><input id="c-emp" type="text" value="' + esc(c.empreendimento) + '"></div>' +
+    '<div class="row"><div class="grow"><label for="c-emp">Empreendimento padrão (opcional, já vem preenchido no cheque)</label><input id="c-emp" type="text" value="' + esc(c.empreendimento) + '"></div>' +
     '<div class="grow"><label for="c-empresa">Empresa</label><input id="c-empresa" type="text" value="' + esc(c.empresa) + '"></div></div>' +
     '<div class="row"><div class="grow"><label for="c-valor">Valor padrão do Cheque Bônus (R$), se a base não trouxer</label><input id="c-valor" type="text" inputmode="decimal" value="' + esc(valorInput(c.valor_padrao)) + '"></div>' +
     '<div class="grow"><label for="c-resp">Responsável pela entrega (opcional)</label><input id="c-resp" type="text" value="' + esc(c.responsavel) + '"></div></div>' +
     '<div><label for="c-texto">Texto complementar no documento (opcional)</label><textarea id="c-texto">' + esc(c.texto_complementar) + '</textarea></div>' +
     '<div id="cfg-msg"></div><button class="btn" id="cfg-salvar">Salvar configurações</button></section>';
   $('#cfg-salvar').addEventListener('click', async function(){
-    var v = { empreendimento: $('#c-emp').value.trim() || 'EPLENUM RESERVE', empresa: $('#c-empresa').value.trim() || 'Emais Urbanismo',
+    var v = { empreendimento: $('#c-emp').value.trim(), empresa: $('#c-empresa').value.trim() || 'Emais Urbanismo',
       valor_padrao: parseValor($('#c-valor').value), responsavel: $('#c-resp').value.trim(), texto_complementar: $('#c-texto').value.trim() };
     var r = await S.sb.from('configuracoes').upsert({ chave: 'documento', valor: v, atualizado_em: new Date().toISOString() });
     if (r.error){ $('#cfg-msg').innerHTML = msg('Não foi possível salvar: ' + traduzErro(r.error), 'err'); return; }
@@ -944,11 +1079,12 @@ function adminCheckin(){
   var c = S.chk;
   $('#admin-corpo').innerHTML = '<section class="card stack"><h2>Check-in do evento</h2>' +
     '<div><label for="k-local">Local de retirada do cheque (aparece na tela da recepção)</label><input id="k-local" type="text" value="' + esc(c.local) + '" placeholder="Ex.: Stand de vendas, Rua Tal, 100"></div>' +
+    '<div><label for="k-cap">Lugares por van</label><input id="k-cap" type="number" min="1" max="60" inputmode="numeric" value="' + esc(capVan()) + '"></div>' +
     '<label class="check"><input type="checkbox" id="k-exigir"' + (c.exigir ? ' checked' : '') + '>Exigir check-in antes de gerar o documento</label>' +
     '<p class="muted" style="margin:0">Com a exigência ligada, o atendente só consegue gerar o documento de quem já fez check-in. O administrador sempre pode gerar. Deixe desligada nos testes.</p>' +
     '<div id="k-msg"></div><button class="btn" id="k-salvar">Salvar configurações do check-in</button></section>';
   $('#k-salvar').addEventListener('click', async function(){
-    var v = { exigir: $('#k-exigir').checked, local: $('#k-local').value.trim() };
+    var v = { exigir: $('#k-exigir').checked, local: $('#k-local').value.trim(), capacidade: Math.max(1, Math.min(60, parseInt($('#k-cap').value, 10) || 13)) };
     var r = await S.sb.from('configuracoes').upsert({ chave: 'checkin', valor: v, atualizado_em: new Date().toISOString() });
     if (r.error){ $('#k-msg').innerHTML = msg('Não foi possível salvar: ' + traduzErro(r.error), 'err'); return; }
     S.chk = v; toast('Configurações do check-in salvas');
@@ -989,10 +1125,10 @@ async function adminRelatorio(){
       '<div class="cont"><b>' + (ck - dc < 0 ? 0 : ck - dc) + '</b><span>Aguardando documento</span></div><div class="cont"><b>' + man + '</b><span>Cadastros manuais</span></div>';
     var v = filtrados();
     if (!v.length){ $('#rel-corpo').innerHTML = msg('Nada para mostrar ainda.', 'info'); return; }
-    $('#rel-corpo').innerHTML = '<div class="rolagem"><table class="tabela"><thead><tr><th>Cliente</th><th>CPF</th><th>Telefone</th><th>Corretor</th><th>Origem</th><th>Check-in</th><th>Documento assinado</th><th>Tempo</th><th>Situação</th><th>Protocolo</th></tr></thead><tbody>' +
+    $('#rel-corpo').innerHTML = '<div class="rolagem"><table class="tabela"><thead><tr><th>Cliente</th><th>CPF</th><th>Telefone</th><th>Corretor</th><th>Origem</th><th>Van</th><th>Acomp.</th><th>Check-in</th><th>Documento assinado</th><th>Tempo</th><th>Situação</th><th>Protocolo</th></tr></thead><tbody>' +
       v.map(function(x){
         return '<tr><td>' + esc(titulo(x.nome)) + '</td><td>' + esc(x.cpf ? fmtCPF(x.cpf) : 'sem CPF') + '</td><td>' + esc(x.telefone || '') + '</td><td>' + esc(x.corretor || '') + '</td><td>' + (x.manual ? 'Manual' : 'Planilha') +
-          '</td><td>' + esc(fmtDH(x.checkin_em)) + '</td><td>' + esc(fmtDH(x.doc_em)) + '</td><td>' + esc(tempoEntre(x.checkin_em, x.doc_em)) + '</td><td>' + esc(situacaoRel(x)) + '</td><td>' + esc(x.protocolo || '') + '</td></tr>';
+          '</td><td>' + esc(x.van ? 'Van ' + x.van : '') + '</td><td>' + esc(x.van ? x.acompanhantes : '') + '</td><td>' + esc(fmtDH(x.checkin_em)) + '</td><td>' + esc(fmtDH(x.doc_em)) + '</td><td>' + esc(tempoEntre(x.checkin_em, x.doc_em)) + '</td><td>' + esc(situacaoRel(x)) + '</td><td>' + esc(x.protocolo || '') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
   $('#rel-atualizar').addEventListener('click', carregar);
@@ -1003,7 +1139,7 @@ async function adminRelatorio(){
     if (!v.length){ toast('Nada para exportar'); return; }
     var linhas = v.map(function(x){
       return { 'Cliente': titulo(x.nome), 'CPF': x.cpf ? fmtCPF(x.cpf) : 'sem CPF', 'Telefone': x.telefone || '', 'Corretor': x.corretor || '',
-        'Origem': x.manual ? 'Inserção manual' : 'Planilha', 'Check-in (data e hora)': fmtDH(x.checkin_em), 'Check-in feito por': x.checkin_por || '',
+        'Origem': x.manual ? 'Inserção manual' : 'Planilha', 'Van': x.van ? 'Van ' + x.van : '', 'Acompanhantes': x.van ? x.acompanhantes : '', 'Check-in (data e hora)': fmtDH(x.checkin_em), 'Check-in feito por': x.checkin_por || '',
         'Documento assinado (data e hora)': fmtDH(x.doc_em), 'Documento gerado por': x.doc_por || '', 'Tempo entre check-in e assinatura': tempoEntre(x.checkin_em, x.doc_em),
         'Situação': situacaoRel(x), 'Protocolo': x.protocolo || '', 'Valor do bônus': x.valor_bonus != null ? Number(x.valor_bonus) : '' };
     });
