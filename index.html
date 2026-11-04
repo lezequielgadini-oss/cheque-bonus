@@ -127,6 +127,12 @@ body.modo-cliente .pad{height:clamp(240px,40vh,380px)}
 .subtabs{display:flex;gap:6px;flex-wrap:wrap}
 .subtabs button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;min-height:42px;cursor:pointer;font-weight:700;color:var(--muted)}
 .subtabs button[aria-current="page"]{background:var(--btn-bg);border-color:var(--btn-bg);color:var(--btn-fg)}
+.tag.manual{background:var(--warn-bg);color:var(--warn-fg)}
+.item .acoes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rolagem{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+.tabela{width:100%;border-collapse:collapse;font-size:.86rem}
+.tabela th,.tabela td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.tabela th{background:var(--soft);font-size:.74rem;text-transform:uppercase;letter-spacing:.06em}
 .login{max-width:440px;margin:9vh auto 0}
 .login .faixa{height:56px;border-radius:10px;overflow:hidden;margin-bottom:22px}
 .login .faixa svg{width:100%;height:100%;display:block}
@@ -261,11 +267,12 @@ function $(s, r){ return (r || document).querySelector(s); }
 var S = {
   sb: null, user: null, papel: 'operador',
   cfg: { empreendimento: 'EPLENUM RESERVE', empresa: 'Emais Urbanismo', valor_padrao: null, texto_complementar: '', responsavel: '' },
-  chk: { exigir: false, local: '', vans: ['Van 1', 'Van 2'] },
-  ck: { lista: [], resultados: null, termo: '', filtro: 'todos', van: '' },
+  chk: { exigir: false, local: '' },
+  ck: { lista: [], resultados: null, termo: '', filtro: 'todos' },
+  at: { fila: [], res: null, termo: '', mapa: {} }, rel: [],
   view: 'busca', cliente: null, ultimo: null, pad: null, adminTab: 'base', imp: null
 };
-var timerCk = null, seqCk = 0;
+var timerCk = null, seqCk = 0, seqAt = 0;
 
 function msg(texto, tipo){ return '<p class="msg ' + (tipo || 'info') + '">' + esc(texto) + '</p>'; }
 function toast(t){
@@ -384,7 +391,7 @@ async function entrar(user){
   var c = await S.sb.from('configuracoes').select('valor').eq('chave', 'documento').maybeSingle();
   if (c.data && c.data.valor) S.cfg = Object.assign(S.cfg, c.data.valor);
   var k = await S.sb.from('configuracoes').select('valor').eq('chave', 'checkin').maybeSingle();
-  if (k.data && k.data.valor) S.chk = Object.assign({ exigir: false, local: '', vans: [] }, k.data.valor);
+  if (k.data && k.data.valor) S.chk = Object.assign({ exigir: false, local: '' }, k.data.valor);
   var ea = await S.sb.rpc('existe_admin');
   S.semAdmin = ea.error ? false : ea.data === false;
   S.view = S.papel === 'recepcao' ? 'checkin' : 'busca'; S.cliente = null;
@@ -438,70 +445,98 @@ function render(){
   S.view = 'busca'; renderBusca();
 }
 
-/* ---------------- busca por CPF ---------------- */
+/* ---------------- atendimento: fila de check-ins e busca ---------------- */
+function infoPessoa(x){
+  var p = [], c = x.cpf != null && x.cpf !== '' ? fmtCPF(x.cpf) : (x.cpf_mask || '');
+  p.push(c ? 'CPF ' + c : 'sem CPF');
+  if (x.telefone) p.push(x.telefone);
+  if (x.corretor) p.push('Corretor: ' + x.corretor);
+  if (x.embarque_em) p.push('check-in ' + fmtHora(x.embarque_em));
+  return p.join(' | ');
+}
+function linhaAt(x){
+  var exige = !!S.chk.exigir && S.papel !== 'admin', sem = !x.embarque_em, bloq = exige && sem, tags = '';
+  if (x.manual) tags += '<span class="tag manual">Cadastro manual</span>';
+  if (x.doc_em) tags += '<span class="tag etapa-van">Documento gerado ' + fmtHora(x.doc_em) + '</span>';
+  else if (sem) tags += '<span class="tag">Sem check-in</span>';
+  return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x)) + '</span></div>' +
+    '<div class="acoes">' + tags + '<button class="btn" data-gerar="' + esc(x.id) + '"' + (bloq ? ' disabled title="Aguardando check-in na recepção"' : '') + '>' + (x.doc_em ? 'Gerar novamente' : 'GERAR DOCUMENTO') + '</button></div></div>';
+}
+function abrirManual(boxSel, nomeInicial, aoCriar){
+  var box = $(boxSel);
+  box.innerHTML = '<div class="card stack" style="background:var(--soft)"><h3>Cadastro manual</h3>' +
+    '<p class="muted" style="margin:0">Use quando o cliente não está na planilha. O registro fica marcado como inserção manual.</p>' +
+    '<div class="row"><div class="grow"><label for="m-nome">Nome completo *</label><input id="m-nome" type="text" autocomplete="off" value="' + esc(nomeInicial || '') + '"></div>' +
+    '<div class="grow"><label for="m-cpf">CPF (opcional)</label><input id="m-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14"></div></div>' +
+    '<div class="row"><div class="grow"><label for="m-tel">Telefone</label><input id="m-tel" type="tel" autocomplete="off" placeholder="(00) 00000-0000"></div>' +
+    '<div class="grow"><label for="m-corr">Nome do corretor em contato</label><input id="m-corr" type="text" autocomplete="off"></div></div>' +
+    '<div id="m-msg"></div><div class="row"><button class="btn" id="m-salvar" type="button">Salvar cadastro</button><button class="btn sec" id="m-cancelar" type="button">Cancelar</button></div></div>';
+  $('#m-nome').focus();
+  $('#m-cancelar').addEventListener('click', function(){ box.innerHTML = ''; });
+  $('#m-salvar').addEventListener('click', async function(){
+    var nome = $('#m-nome').value.trim(), cpf = onlyDigits($('#m-cpf').value), out = $('#m-msg');
+    if (nome.length < 3){ out.innerHTML = msg('Informe o nome do cliente.', 'warn'); return; }
+    if (cpf && (cpf.length !== 11 || !validCPF(cpf))){ out.innerHTML = msg('CPF inválido. Confira os números ou deixe em branco.', 'warn'); return; }
+    var b = $('#m-salvar'); b.disabled = true; out.innerHTML = msg('Salvando...', 'info');
+    var r = await S.sb.rpc('inserir_cliente_manual', { p_nome: nome, p_cpf: cpf, p_telefone: $('#m-tel').value, p_corretor: $('#m-corr').value });
+    if (r.error){ b.disabled = false; out.innerHTML = msg(traduzErro(r.error), 'err'); return; }
+    box.innerHTML = '';
+    aoCriar(Array.isArray(r.data) ? r.data[0] : r.data);
+  });
+}
 function renderBusca(){
   app.innerHTML = shell(
-    '<section class="card stack"><div><h2>Buscar cliente</h2><p class="muted" style="margin:4px 0 0">Digite o CPF do cliente para localizar o cadastro.</p></div>' +
-    '<div class="row"><div class="grow"><label for="cpf">CPF</label><input id="cpf" class="cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14"></div>' +
-    '<button class="btn" id="buscar">Buscar</button></div></section><div id="resultado"></div>');
+    '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:flex-end"><div class="grow"><h2>Atendimento</h2>' +
+    '<p class="muted" style="margin:4px 0 0">Quem já fez check-in aparece na lista abaixo. Para outro cliente, busque pelo nome (basta o primeiro) ou pelo CPF.</p></div>' +
+    '<button class="btn sec" id="at-manual" type="button">Cadastro manual</button></div>' +
+    '<div><label for="at-busca">Buscar por nome ou CPF</label><input id="at-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.at.termo) + '"></div>' +
+    '<div id="at-manual-box"></div><div id="at-res"></div></section>' +
+    '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h2 id="at-titulo">Aguardando documento</h2><button class="btn sec sm" id="at-atualizar" type="button">Atualizar</button></div>' +
+    '<div id="at-fila">' + msg('Carregando...', 'info') + '</div></section>');
   ligarShell();
-  var cpf = $('#cpf');
-  cpf.addEventListener('input', function(){
-    var d = onlyDigits(cpf.value).slice(0, 11), o = d;
-    if (d.length > 9) o = d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6,9) + '-' + d.slice(9);
-    else if (d.length > 6) o = d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6);
-    else if (d.length > 3) o = d.slice(0,3) + '.' + d.slice(3);
-    cpf.value = o;
+  var busca = $('#at-busca'), t = null;
+  busca.addEventListener('input', function(){
+    S.at.termo = busca.value; clearTimeout(t);
+    if (busca.value.trim().length < 3){ seqAt++; S.at.res = null; desenharAt(); return; }
+    t = setTimeout(atualizarAt, 350);
   });
-  cpf.addEventListener('keydown', function(e){ if (e.key === 'Enter') buscar(); });
-  $('#buscar').addEventListener('click', buscar);
-  if (S.cliente){ cpf.value = fmtCPF(S.cliente.cpf); mostrarCliente(); } else cpf.focus();
-}
-async function buscar(){
-  var d = onlyDigits($('#cpf').value), out = $('#resultado');
-  if (d.length !== 11){ out.innerHTML = msg('Digite os 11 números do CPF.', 'warn'); return; }
-  out.innerHTML = msg('Buscando...', 'info');
-  var r = await S.sb.rpc('buscar_cliente', { p_cpf: d });
-  if (r.error){ out.innerHTML = msg('Erro na busca: ' + traduzErro(r.error), 'err'); return; }
-  if (!r.data || !r.data.length){ S.cliente = null; out.innerHTML = msg('CPF não encontrado na base.', 'warn'); return; }
-  S.cliente = r.data[0];
-  mostrarCliente();
-}
-function mostrarCliente(){
-  var c = S.cliente, dados = c.dados || {}, extras = [];
-  Object.keys(dados).forEach(function(k){
-    var v = dados[k], nk = norm(k);
-    if (v === '' || v == null || nk.indexOf('cpf') >= 0 || String(v) === c.nome) return;
-    extras.push('<div><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>');
+  $('#at-atualizar').addEventListener('click', atualizarAt);
+  $('#at-manual').addEventListener('click', function(){
+    var tm = S.at.termo.trim();
+    abrirManual('#at-manual-box', /\d/.test(tm) ? '' : tm, function(row){
+      S.at.termo = row.nome; $('#at-busca').value = row.nome; toast('Cliente cadastrado manualmente'); atualizarAt();
+    });
   });
-  $('#resultado').innerHTML = '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center">' +
-    '<div style="min-width:0"><span class="tag">Cliente encontrado</span><div class="nome-grande" style="margin-top:6px;overflow-wrap:anywhere">' + esc(titulo(c.nome)) + '</div></div>' +
-    '<button class="btn" id="gerar">Selecionar e gerar documento</button></div>' +
-    '<div id="ck-status"></div>' +
-    '<dl class="kv"><div><dt>CPF</dt><dd>' + esc(fmtCPF(c.cpf)) + '</dd></div>' +
-    (c.valor_bonus != null ? '<div><dt>Valor do bônus na base</dt><dd>' + esc(brl(Number(c.valor_bonus))) + '</dd></div>' : '') +
-    extras.slice(0, 10).join('') + '</dl></section>';
-  $('#gerar').addEventListener('click', function(){ S.view = 'doc'; render(); });
-  if (S.chk.exigir && S.papel !== 'admin') $('#gerar').disabled = true;
-  statusCk();
+  atualizarAt();
 }
-async function statusCk(){
-  var cid = S.cliente.id, exige = !!S.chk.exigir && S.papel !== 'admin';
-  var r = await S.sb.rpc('checkin_do_cliente', { p_cliente_id: cid });
-  var box = $('#ck-status'), btn = $('#gerar');
-  if (!box || !btn || !S.cliente || S.cliente.id !== cid) return;
-  if (r.error){
-    box.innerHTML = msg('Não foi possível consultar o check-in: ' + traduzErro(r.error), exige ? 'err' : 'warn');
-    return;
-  }
-  var k = r.data && r.data[0];
-  if (k && k.embarque_em){
-    box.innerHTML = msg('Check-in feito: embarcou na van às ' + fmtHora(k.embarque_em) + (k.van ? ' (' + k.van + ')' : '') + '.', 'ok');
-    btn.disabled = false; return;
-  }
-  var txt = k && k.chegada_em ? 'Chegou às ' + fmtHora(k.chegada_em) + ', mas ainda não embarcou na van.' : 'Este cliente ainda não tem check-in registrado.';
-  if (exige) txt += ' O check-in é obrigatório antes de gerar o documento. Peça à recepção para registrar o embarque na van.';
-  box.innerHTML = msg(txt, exige ? 'warn' : 'info');
+async function atualizarAt(){
+  var meu = ++seqAt, jobs = [S.sb.rpc('fila_atendimento')], buscou = S.at.termo.trim().length >= 3;
+  if (buscou) jobs.push(S.sb.rpc('buscar_atendimento', { p_termo: S.at.termo }));
+  var res = await Promise.all(jobs);
+  if (meu !== seqAt || S.view !== 'busca' || !$('#at-fila')) return;
+  if (res[0].error){ $('#at-fila').innerHTML = msg('Erro ao carregar a lista: ' + traduzErro(res[0].error), 'err'); return; }
+  S.at.fila = res[0].data || [];
+  S.at.res = buscou ? (res[1].error ? [] : (res[1].data || [])) : null;
+  if (buscou && res[1].error) toast('Erro na busca: ' + traduzErro(res[1].error));
+  desenharAt();
+  clearTimeout(timerCk);
+  timerCk = setTimeout(function(){ if (S.view === 'busca') atualizarAt(); }, 20000);
+}
+function desenharAt(){
+  if (!$('#at-fila')) return;
+  S.at.mapa = {};
+  S.at.fila.forEach(function(x){ S.at.mapa[x.id] = x; });
+  (S.at.res || []).forEach(function(x){ S.at.mapa[x.id] = x; });
+  $('#at-titulo').textContent = 'Aguardando documento (' + S.at.fila.length + ')';
+  $('#at-fila').innerHTML = S.at.fila.length ? '<div class="lista">' + S.at.fila.map(linhaAt).join('') + '</div>' : msg('Nenhum cliente com check-in aguardando documento no momento.', 'info');
+  var r = S.at.res;
+  $('#at-res').innerHTML = r === null ? '' : (r.length ? '<div class="lista">' + r.map(linhaAt).join('') + '</div>' : msg('Ninguém encontrado com esse nome ou CPF. Se o cliente não está na planilha, use o Cadastro manual.', 'warn'));
+  document.querySelectorAll('[data-gerar]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var x = S.at.mapa[b.getAttribute('data-gerar')]; if (!x) return;
+      S.cliente = x; S.view = 'doc'; render();
+    });
+  });
 }
 
 /* ---------------- documento e assinatura ---------------- */
@@ -509,7 +544,7 @@ function paragrafos(v){
   var emp = S.cfg.empreendimento || 'EPLENUM RESERVE', empresa = S.cfg.empresa || 'Emais Urbanismo';
   var vv = v.valor ? ' no valor de ' + brl(v.valor) + ' (' + valorExtenso(v.valor) + ')' : '';
   var p = [];
-  p.push('A ' + empresa + ' parabeniza ' + v.nome + ', portador(a) do CPF nº ' + fmtCPF(v.cpf) + ', pela conquista do Cheque Bônus' + vv + '.');
+  p.push('A ' + empresa + ' parabeniza ' + v.nome + (v.cpf ? ', portador(a) do CPF nº ' + fmtCPF(v.cpf) : '') + ', pela conquista do Cheque Bônus' + vv + '.');
   p.push('O Cheque Bônus está sendo retirado nesta data, ' + dataLonga(v.data) + ', e poderá ser utilizado no lançamento do empreendimento ' + emp + '.');
   if (S.cfg.texto_complementar && String(S.cfg.texto_complementar).trim()) p.push(String(S.cfg.texto_complementar).trim());
   p.push('Ao assinar abaixo, o(a) cliente confirma a retirada do Cheque Bônus na data indicada.');
@@ -618,7 +653,7 @@ function gerarPDF(d){
   doc.addImage(d.sigURL, 'PNG', M + (bw - iw) / 2, by + bh - ih, iw, ih);
   doc.setDrawColor(19,12,14); doc.setLineWidth(0.3); doc.line(M, by + bh + 1, M + bw, by + bh + 1);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(19,12,14); doc.text(d.nome, M, by + bh + 6);
-  doc.setFont('helvetica', 'normal'); doc.text('CPF ' + fmtCPF(d.cpf), M, by + bh + 11);
+  doc.setFont('helvetica', 'normal'); doc.text(d.cpf ? 'CPF ' + fmtCPF(d.cpf) : 'CPF não informado', M, by + bh + 11);
   doc.setFontSize(9); doc.setTextColor(74,96,112); doc.text('Assinatura do(a) cliente', M, by + bh + 16);
   if (S.cfg.responsavel && String(S.cfg.responsavel).trim()) doc.text('Responsável pela entrega: ' + String(S.cfg.responsavel).trim(), M, by + bh + 24);
   doc.setFontSize(8); doc.setTextColor(110,126,138);
@@ -685,10 +720,10 @@ async function renderDocs(){
   }
   function desenhar(){
     var q = norm($('#filtro').value), d = onlyDigits($('#filtro').value);
-    var vis = docs.filter(function(x){ return !q || norm(x.nome).indexOf(q) >= 0 || (d && x.cpf.indexOf(d) >= 0); });
+    var vis = docs.filter(function(x){ return !q || norm(x.nome).indexOf(q) >= 0 || (d && x.cpf && x.cpf.indexOf(d) >= 0); });
     if (!vis.length){ lista.innerHTML = msg(docs.length ? 'Nenhum documento com esse filtro.' : 'Nenhum documento gerado ainda.', 'info'); return; }
     lista.innerHTML = vis.map(function(x){
-      return '<div class="item"><div class="info"><b>' + esc(x.nome) + '</b><span>CPF ' + esc(maskCPFLista(x.cpf)) +
+      return '<div class="item"><div class="info"><b>' + esc(x.nome) + '</b><span>' + (x.cpf ? 'CPF ' + esc(maskCPFLista(x.cpf)) : 'sem CPF') +
         (x.valor_bonus != null ? ' | ' + esc(brl(Number(x.valor_bonus))) : '') +
         ' | Retirada ' + esc(dataISOparaBR(x.data_retirada)) + ' | Protocolo ' + esc(x.id.slice(0, 8).toUpperCase()) +
         (S.papel === 'admin' && emails[x.criado_por] ? ' | Atendente ' + esc(emails[x.criado_por]) : '') + '</span></div>' +
@@ -709,30 +744,27 @@ async function renderDocs(){
   desenhar();
 }
 
-/* ---------------- check-in: chegada e embarque na van ---------------- */
+/* ---------------- check-in (recepção) ---------------- */
 function fmtHora(iso){ return iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''; }
-function etapaCk(x){ return x.doc_gerado ? 'doc' : (x.embarque_em ? 'van' : (x.chegada_em ? 'chegou' : 'aguarda')); }
-var ROTULO_CK = { doc: 'Documento gerado', van: 'Na van', chegou: 'Chegou', aguarda: 'Não chegou' };
+function fmtDH(iso){ return iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''; }
+function etapaCk(x){ return x.doc_gerado ? 'doc' : (x.embarque_em ? 'aguarda' : 'nao'); }
+var ROTULO_CK = { doc: 'Documento gerado', aguarda: 'Check-in feito', nao: 'Sem check-in' };
+var CLASSE_CK = { doc: 'etapa-van', aguarda: 'etapa-chegou', nao: '' };
 function linhaCk(x){
-  var e = etapaCk(x), partes = [x.cpf_mask], id = ' data-id="' + esc(x.cliente_id) + '"';
-  if (x.chegada_em) partes.push('chegou ' + fmtHora(x.chegada_em));
-  if (x.embarque_em) partes.push('van ' + fmtHora(x.embarque_em) + (x.van ? ' (' + x.van + ')' : ''));
-  var emb = '<button class="btn" data-ck="embarque"' + id + '>Embarcar na van</button>', acoes = '';
-  if (e === 'aguarda') acoes = '<button class="btn sec" data-ck="chegada"' + id + '>Registrar chegada</button>' + emb;
-  else if (e === 'chegou') acoes = emb + '<button class="btn sec sm" data-ck="desfazer_chegada"' + id + '>Desfazer chegada</button>';
-  else if (e === 'van') acoes = '<button class="btn sec sm" data-ck="desfazer_embarque"' + id + '>Desfazer embarque</button>';
-  return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(partes.join(' | ')) + '</span></div>' +
-    '<span class="tag etapa-' + e + '">' + ROTULO_CK[e] + '</span><div class="acoes">' + acoes + '</div></div>';
+  var e = etapaCk(x), id = ' data-id="' + esc(x.cliente_id) + '"', acoes = '';
+  if (e === 'nao') acoes = '<button class="btn" data-ck="embarque"' + id + '>Fazer check-in</button>';
+  else if (e === 'aguarda') acoes = '<button class="btn sec sm" data-ck="desfazer_embarque"' + id + '>Desfazer check-in</button>';
+  return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x)) + '</span></div>' +
+    (x.manual ? '<span class="tag manual">Cadastro manual</span>' : '') +
+    '<span class="tag ' + CLASSE_CK[e] + '">' + ROTULO_CK[e] + '</span><div class="acoes">' + acoes + '</div></div>';
 }
 function renderCheckin(){
-  var local = String(S.chk.local || '').trim(), vans = (S.chk.vans || []).filter(function(v){ return String(v).trim(); });
-  if (!S.ck.van || vans.indexOf(S.ck.van) < 0) S.ck.van = vans[0] || '';
+  var local = String(S.chk.local || '').trim();
   app.innerHTML = shell(
-    '<section class="card stack"><div><h2>Check-in do evento</h2><p class="muted" style="margin:4px 0 0">Busque pelo nome ou CPF, registre a chegada e, quando o cliente subir na van, toque em Embarcar na van.' +
-    (local ? ' Retirada do cheque: <b>' + esc(local) + '</b>.' : '') + '</p></div>' +
-    '<div class="row"><div class="grow"><label for="ck-busca">Nome ou CPF</label><input id="ck-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.ck.termo) + '"></div>' +
-    (vans.length ? '<div style="flex:0 1 220px"><label for="ck-van">Van de embarque</label><select id="ck-van">' + vans.map(function(v){ return '<option' + (v === S.ck.van ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('') + '</select></div>' : '') +
-    '</div><div id="ck-res"></div></section>' +
+    '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:flex-end"><div class="grow"><h2>Check-in do evento</h2><p class="muted" style="margin:4px 0 0">Busque o cliente pelo nome (basta o primeiro) ou pelo CPF e toque em Fazer check-in.' +
+    (local ? ' Retirada do cheque: <b>' + esc(local) + '</b>.' : '') + '</p></div><button class="btn sec" id="ck-manual" type="button">Cadastro manual</button></div>' +
+    '<div><label for="ck-busca">Nome ou CPF</label><input id="ck-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.ck.termo) + '"></div>' +
+    '<div id="ck-manual-box"></div><div id="ck-res"></div></section>' +
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h2>Lista do evento</h2><button class="btn sec sm" id="ck-atualizar" type="button">Atualizar</button></div>' +
     '<div class="cont-grid" id="ck-cont"></div><div class="subtabs" id="ck-filtros"></div><div id="ck-lista">' + msg('Carregando...', 'info') + '</div></section>');
   ligarShell();
@@ -742,8 +774,15 @@ function renderCheckin(){
     if (busca.value.trim().length < 3){ seqCk++; S.ck.resultados = null; desenharCk(); return; }
     t = setTimeout(atualizarCk, 350);
   });
-  var sv = $('#ck-van'); if (sv) sv.addEventListener('change', function(){ S.ck.van = sv.value; });
   $('#ck-atualizar').addEventListener('click', atualizarCk);
+  $('#ck-manual').addEventListener('click', function(){
+    var tm = S.ck.termo.trim();
+    abrirManual('#ck-manual-box', /\d/.test(tm) ? '' : tm, async function(row){
+      var r = await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(row.id), p_etapa: 'embarque', p_van: null });
+      toast(r.error ? 'Cadastrado, mas o check-in falhou: ' + traduzErro(r.error) : 'Cadastrado e check-in feito');
+      S.ck.termo = ''; $('#ck-busca').value = ''; S.ck.resultados = null; atualizarCk();
+    });
+  });
   atualizarCk();
 }
 async function atualizarCk(){
@@ -761,14 +800,13 @@ async function atualizarCk(){
 }
 function desenharCk(){
   if (!$('#ck-lista')) return;
-  var l = S.ck.lista, n = { chegou: 0, van: 0, doc: 0 };
-  l.forEach(function(x){ n[etapaCk(x)]++; });
+  var l = S.ck.lista, n = { aguarda: 0, doc: 0 };
+  l.forEach(function(x){ var e = etapaCk(x); if (n[e] != null) n[e]++; });
   $('#ck-cont').innerHTML =
-    '<div class="cont"><b>' + l.length + '</b><span>Chegaram</span></div>' +
-    '<div class="cont"><b>' + n.chegou + '</b><span>Aguardando a van</span></div>' +
-    '<div class="cont"><b>' + n.van + '</b><span>Na van</span></div>' +
+    '<div class="cont"><b>' + l.length + '</b><span>Check-ins feitos</span></div>' +
+    '<div class="cont"><b>' + n.aguarda + '</b><span>Aguardando documento</span></div>' +
     '<div class="cont"><b>' + n.doc + '</b><span>Documento gerado</span></div>';
-  var filtros = [['todos', 'Todos'], ['chegou', 'Aguardando a van'], ['van', 'Na van'], ['doc', 'Documento gerado']];
+  var filtros = [['todos', 'Todos'], ['aguarda', 'Aguardando documento'], ['doc', 'Documento gerado']];
   $('#ck-filtros').innerHTML = filtros.map(function(f){
     return '<button type="button" data-filtro="' + f[0] + '"' + (S.ck.filtro === f[0] ? ' aria-current="page"' : '') + '>' + f[1] + '</button>';
   }).join('');
@@ -778,24 +816,23 @@ function desenharCk(){
   var vis = l.filter(function(x){ return S.ck.filtro === 'todos' || etapaCk(x) === S.ck.filtro; });
   $('#ck-lista').innerHTML = vis.length ? '<div class="lista">' + vis.map(linhaCk).join('') + '</div>' : msg('Nenhum cliente nesta lista ainda.', 'info');
   var r = S.ck.resultados;
-  $('#ck-res').innerHTML = r === null ? '' : (r.length ? '<div class="lista">' + r.map(linhaCk).join('') + '</div>' : msg('Ninguém encontrado com esse nome ou CPF.', 'warn'));
+  $('#ck-res').innerHTML = r === null ? '' : (r.length ? '<div class="lista">' + r.map(linhaCk).join('') + '</div>' : msg('Ninguém encontrado. Se o cliente não está na planilha, use o Cadastro manual.', 'warn'));
   document.querySelectorAll('[data-ck]').forEach(function(b){
     b.addEventListener('click', function(){ acaoCk(b.getAttribute('data-id'), b.getAttribute('data-ck')); });
   });
 }
 async function acaoCk(id, etapa){
-  var sel = $('#ck-van'), van = sel ? sel.value : '';
   document.querySelectorAll('[data-ck]').forEach(function(b){ b.disabled = true; });
-  var r = await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(id), p_etapa: etapa, p_van: etapa === 'embarque' ? van : null });
+  var r = await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(id), p_etapa: etapa, p_van: null });
   if (r.error) toast('Não foi possível registrar: ' + traduzErro(r.error));
-  else toast({ chegada: 'Chegada registrada', embarque: 'Embarque na van registrado', desfazer_embarque: 'Embarque desfeito', desfazer_chegada: 'Chegada desfeita' }[etapa]);
+  else toast(etapa === 'embarque' ? 'Check-in registrado' : 'Check-in desfeito');
   await atualizarCk();
 }
 
 /* ---------------- administração ---------------- */
 function renderAdmin(){
   function t(id, nome){ return '<button data-sub="' + id + '"' + (S.adminTab === id ? ' aria-current="page"' : '') + '>' + nome + '</button>'; }
-  app.innerHTML = shell('<div class="subtabs">' + t('base', 'Base de clientes') + t('config', 'Configurações do documento') + t('checkin', 'Check-in') + t('usuarios', 'Usuários') + '</div><div id="admin-corpo"></div>');
+  app.innerHTML = shell('<div class="subtabs">' + t('base', 'Base de clientes') + t('config', 'Configurações do documento') + t('checkin', 'Check-in') + t('relatorio', 'Relatório') + t('usuarios', 'Usuários') + '</div><div id="admin-corpo"></div>');
   ligarShell();
   document.querySelectorAll('[data-sub]').forEach(function(b){
     b.addEventListener('click', function(){ S.adminTab = b.getAttribute('data-sub'); renderAdmin(); });
@@ -803,6 +840,7 @@ function renderAdmin(){
   if (S.adminTab === 'base') adminBase();
   else if (S.adminTab === 'config') adminConfig();
   else if (S.adminTab === 'checkin') adminCheckin();
+  else if (S.adminTab === 'relatorio') adminRelatorio();
   else adminUsuarios();
 }
 async function adminBase(){
@@ -870,7 +908,7 @@ async function importar(){
   btn.disabled = true; out.innerHTML = msg('Importando...', 'info');
   try {
     if (subst){
-      var del = await S.sb.from('clientes').delete().gt('id', 0);
+      var del = await S.sb.from('clientes').delete().eq('manual', false);
       if (del.error) throw del.error;
     }
     for (var i = 0; i < p.validos.length; i += 500){
@@ -906,18 +944,74 @@ function adminCheckin(){
   var c = S.chk;
   $('#admin-corpo').innerHTML = '<section class="card stack"><h2>Check-in do evento</h2>' +
     '<div><label for="k-local">Local de retirada do cheque (aparece na tela da recepção)</label><input id="k-local" type="text" value="' + esc(c.local) + '" placeholder="Ex.: Stand de vendas, Rua Tal, 100"></div>' +
-    '<div><label for="k-vans">Vans disponíveis (uma por linha)</label><textarea id="k-vans" spellcheck="false">' + esc((c.vans || []).join('\n')) + '</textarea></div>' +
-    '<label class="check"><input type="checkbox" id="k-exigir"' + (c.exigir ? ' checked' : '') + '>Exigir check-in (embarque na van) antes de gerar o documento</label>' +
-    '<p class="muted" style="margin:0">Com a exigência ligada, o atendente só consegue gerar o documento de quem já embarcou na van. O administrador sempre pode gerar. Deixe desligada nos testes.</p>' +
+    '<label class="check"><input type="checkbox" id="k-exigir"' + (c.exigir ? ' checked' : '') + '>Exigir check-in antes de gerar o documento</label>' +
+    '<p class="muted" style="margin:0">Com a exigência ligada, o atendente só consegue gerar o documento de quem já fez check-in. O administrador sempre pode gerar. Deixe desligada nos testes.</p>' +
     '<div id="k-msg"></div><button class="btn" id="k-salvar">Salvar configurações do check-in</button></section>';
   $('#k-salvar').addEventListener('click', async function(){
-    var v = { exigir: $('#k-exigir').checked, local: $('#k-local').value.trim(),
-      vans: $('#k-vans').value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean) };
+    var v = { exigir: $('#k-exigir').checked, local: $('#k-local').value.trim() };
     var r = await S.sb.from('configuracoes').upsert({ chave: 'checkin', valor: v, atualizado_em: new Date().toISOString() });
     if (r.error){ $('#k-msg').innerHTML = msg('Não foi possível salvar: ' + traduzErro(r.error), 'err'); return; }
     S.chk = v; toast('Configurações do check-in salvas');
     $('#k-msg').innerHTML = msg('Configurações salvas.', 'ok');
   });
+}
+function tempoEntre(a, b){
+  if (!a || !b) return '';
+  var m = Math.round((new Date(b) - new Date(a)) / 60000);
+  if (m < 0) return '';
+  return m < 60 ? m + ' min' : Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0');
+}
+function situacaoRel(x){ return x.doc_em ? 'Documento assinado' : (x.checkin_em ? 'Aguardando documento' : 'Sem check-in'); }
+async function adminRelatorio(){
+  $('#admin-corpo').innerHTML = '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h2>Relatório do evento</h2>' +
+    '<div class="row"><button class="btn sec sm" id="rel-atualizar" type="button">Atualizar</button><button class="btn sm" id="rel-excel" type="button">Baixar Excel</button></div></div>' +
+    '<div class="cont-grid" id="rel-cont"></div>' +
+    '<div class="row"><div class="grow"><label for="rel-q">Filtrar por nome, CPF ou corretor</label><input id="rel-q" type="text" autocomplete="off"></div>' +
+    '<div style="flex:0 1 240px"><label for="rel-s">Situação</label><select id="rel-s"><option value="">Todas</option><option>Documento assinado</option><option>Aguardando documento</option><option>Sem check-in</option></select></div></div>' +
+    '<div id="rel-corpo">' + msg('Carregando...', 'info') + '</div></section>';
+  async function carregar(){
+    var r = await S.sb.rpc('relatorio_checkins');
+    if (r.error){ $('#rel-corpo').innerHTML = msg('Erro ao carregar o relatório: ' + traduzErro(r.error), 'err'); return; }
+    S.rel = r.data || []; desenhar();
+  }
+  function filtrados(){
+    var q = norm($('#rel-q').value), d = onlyDigits($('#rel-q').value), s = $('#rel-s').value;
+    return (S.rel || []).filter(function(x){
+      if (s && situacaoRel(x) !== s) return false;
+      if (!q) return true;
+      return norm(x.nome).indexOf(q) >= 0 || norm(x.corretor || '').indexOf(q) >= 0 || (d && x.cpf && x.cpf.indexOf(d) >= 0);
+    });
+  }
+  function desenhar(){
+    var l = S.rel || [], ck = l.filter(function(x){ return x.checkin_em; }).length, dc = l.filter(function(x){ return x.doc_em; }).length;
+    var man = l.filter(function(x){ return x.manual; }).length;
+    $('#rel-cont').innerHTML = '<div class="cont"><b>' + ck + '</b><span>Check-ins</span></div><div class="cont"><b>' + dc + '</b><span>Documentos assinados</span></div>' +
+      '<div class="cont"><b>' + (ck - dc < 0 ? 0 : ck - dc) + '</b><span>Aguardando documento</span></div><div class="cont"><b>' + man + '</b><span>Cadastros manuais</span></div>';
+    var v = filtrados();
+    if (!v.length){ $('#rel-corpo').innerHTML = msg('Nada para mostrar ainda.', 'info'); return; }
+    $('#rel-corpo').innerHTML = '<div class="rolagem"><table class="tabela"><thead><tr><th>Cliente</th><th>CPF</th><th>Telefone</th><th>Corretor</th><th>Origem</th><th>Check-in</th><th>Documento assinado</th><th>Tempo</th><th>Situação</th><th>Protocolo</th></tr></thead><tbody>' +
+      v.map(function(x){
+        return '<tr><td>' + esc(titulo(x.nome)) + '</td><td>' + esc(x.cpf ? fmtCPF(x.cpf) : 'sem CPF') + '</td><td>' + esc(x.telefone || '') + '</td><td>' + esc(x.corretor || '') + '</td><td>' + (x.manual ? 'Manual' : 'Planilha') +
+          '</td><td>' + esc(fmtDH(x.checkin_em)) + '</td><td>' + esc(fmtDH(x.doc_em)) + '</td><td>' + esc(tempoEntre(x.checkin_em, x.doc_em)) + '</td><td>' + esc(situacaoRel(x)) + '</td><td>' + esc(x.protocolo || '') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  $('#rel-atualizar').addEventListener('click', carregar);
+  $('#rel-q').addEventListener('input', desenhar);
+  $('#rel-s').addEventListener('change', desenhar);
+  $('#rel-excel').addEventListener('click', function(){
+    var v = filtrados();
+    if (!v.length){ toast('Nada para exportar'); return; }
+    var linhas = v.map(function(x){
+      return { 'Cliente': titulo(x.nome), 'CPF': x.cpf ? fmtCPF(x.cpf) : 'sem CPF', 'Telefone': x.telefone || '', 'Corretor': x.corretor || '',
+        'Origem': x.manual ? 'Inserção manual' : 'Planilha', 'Check-in (data e hora)': fmtDH(x.checkin_em), 'Check-in feito por': x.checkin_por || '',
+        'Documento assinado (data e hora)': fmtDH(x.doc_em), 'Documento gerado por': x.doc_por || '', 'Tempo entre check-in e assinatura': tempoEntre(x.checkin_em, x.doc_em),
+        'Situação': situacaoRel(x), 'Protocolo': x.protocolo || '', 'Valor do bônus': x.valor_bonus != null ? Number(x.valor_bonus) : '' };
+    });
+    var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), 'Relatório');
+    var out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    baixarBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'relatorio-checkins-' + hojeISO() + '.xlsx');
+  });
+  carregar();
 }
 function papelNome(p){ return p === 'admin' ? 'Administrador' : (p === 'recepcao' ? 'Recepção' : 'Operador'); }
 async function adminUsuarios(){
@@ -926,7 +1020,7 @@ async function adminUsuarios(){
     '<div class="grow"><label for="u-senha">Senha (mínimo 8 caracteres)</label><input id="u-senha" type="text" autocomplete="off" spellcheck="false"></div>' +
     '<div style="flex:0 1 230px"><label for="u-papel">Perfil</label><select id="u-papel"><option value="operador">Operador (gera documentos)</option><option value="recepcao">Recepção (só check-in)</option></select></div>' +
     '<button class="btn sec" id="u-gerar" type="button">Gerar senha</button><button class="btn" id="u-criar" type="button">Criar usuário</button></div>' +
-    '<div id="u-msg"></div><p class="muted" style="margin:0">Operador busca clientes e gera documentos. Recepção só faz o check-in de chegada e embarque na van. Nenhum dos dois acessa a administração. Anote a senha e passe para a pessoa, ela não volta a aparecer.</p></section>' +
+    '<div id="u-msg"></div><p class="muted" style="margin:0">Operador busca clientes e gera documentos. Recepção só faz o check-in dos clientes. Nenhum dos dois acessa a administração. Anote a senha e passe para a pessoa, ela não volta a aparecer.</p></section>' +
     '<section class="card stack"><h2>Usuários cadastrados</h2><div id="usr">' + msg('Carregando...', 'info') + '</div></section>';
   $('#u-gerar').addEventListener('click', function(){ $('#u-senha').value = gerarSenha(); });
   $('#u-criar').addEventListener('click', async function(){
@@ -995,7 +1089,7 @@ async function init(){
   if (!window.supabase){ app.innerHTML = '<div class="wrap"><div class="card login">' + msg('Não foi possível carregar o Supabase. Verifique a internet e recarregue.', 'err') + '</div></div>'; return; }
   S.sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
   S.sb.auth.onAuthStateChange(function(ev){
-    if (ev === 'SIGNED_OUT'){ clearTimeout(timerCk); S.user = null; S.cliente = null; S.ultimo = null; S.papel = 'operador'; S.ck = { lista: [], resultados: null, termo: '', filtro: 'todos', van: '' }; renderLogin(); }
+    if (ev === 'SIGNED_OUT'){ clearTimeout(timerCk); S.user = null; S.cliente = null; S.ultimo = null; S.papel = 'operador'; S.ck = { lista: [], resultados: null, termo: '', filtro: 'todos' }; S.at = { fila: [], res: null, termo: '', mapa: {} }; renderLogin(); }
   });
   var s = await S.sb.auth.getSession();
   if (s.data && s.data.session) await entrar(s.data.session.user); else renderLogin();
