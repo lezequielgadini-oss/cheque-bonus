@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f4858">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cheque Bônus">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232f4858'/%3E%3Cpolygon points='4,28 16,5 28,28' fill='%2318b68c'/%3E%3Cpolygon points='10,28 16,16 22,28' fill='%231e756a'/%3E%3C/svg%3E">
+<title>Cheque Bônus EPLENUM RESERVE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f7ff; --surface:#ffffff; --fg:#130c0e; --muted:#4a6070; --line:#d3deef;
+  --brand:#18b68c; --brand-strong:#1e756a; --btn-bg:#1e756a; --btn-fg:#ffffff;
+  --soft:#e0e9fc; --bar:#2f4858; --bar-fg:#f3f7ff; --bar-accent:#4ed8b0;
+  --warn-bg:#fff3d6; --warn-fg:#7a5200; --err-bg:#fde7e4; --err-fg:#9b2318;
+  --ok-bg:#dff6ee; --ok-fg:#14574b; --info-bg:#e0e9fc; --info-fg:#2f4858;
+  --pad-bg:#ffffff; --ink:#0b1b2b;
+  --font-display:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1a20; --surface:#17262e; --fg:#e8f0f6; --muted:#9bb0bd; --line:#2a3d48;
+    --brand:#2fd3a5; --brand-strong:#4ed8b0; --btn-bg:#4ed8b0; --btn-fg:#0b1b16;
+    --soft:#203540; --bar:#0a1318; --bar-fg:#e8f0f6; --bar-accent:#4ed8b0;
+    --warn-bg:#3a2f12; --warn-fg:#f2d27a; --err-bg:#3d1c19; --err-fg:#ffb4aa;
+    --ok-bg:#12352c; --ok-fg:#8fe6c8; --info-bg:#203540; --info-fg:#c4d6e2;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.5;min-height:100vh;overscroll-behavior-y:contain;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.2;text-wrap:balance}
+h2{font-size:1.5rem}
+h3{font-size:1.1rem}
+button,input,select,textarea{font:inherit;color:inherit;touch-action:manipulation}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main.wrap{padding-block:24px 56px;display:grid;gap:20px}
+.top{background:var(--bar);color:var(--bar-fg)}
+.topin{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;padding-block:12px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand svg{width:64px;height:34px;flex:none;border-radius:3px}
+.brand b{font-family:var(--font-display);font-size:1.05rem;display:block;line-height:1.1}
+.brand small{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bar-accent)}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap}
+nav.tabs button{background:none;border:0;color:var(--bar-fg);opacity:.78;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600;min-height:44px}
+nav.tabs button[aria-current="page"]{opacity:1;background:rgba(255,255,255,.12);box-shadow:inset 0 -3px 0 var(--bar-accent)}
+nav.tabs button:hover{opacity:1}
+.who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:.88rem;min-width:0}
+.who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36vw;opacity:.85}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px}
+.card.tight{padding:16px}
+.stack{display:grid;gap:14px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.row>*{min-width:0}
+.grow{flex:1 1 220px}
+label{display:block;font-size:.85rem;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.02em}
+input[type=text],input[type=email],input[type=password],input[type=date],select,textarea{width:100%;min-height:52px;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg)}
+textarea{min-height:110px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.cpf{font-family:var(--font-display);font-size:1.5rem;letter-spacing:.06em}
+.btn{background:var(--btn-bg);color:var(--btn-fg);border:0;border-radius:10px;min-height:52px;padding:0 22px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.sec{background:transparent;color:var(--fg);border:1.5px solid var(--line)}
+.btn.sm{min-height:40px;padding:0 14px;font-size:.9rem}
+.ghost{background:transparent;color:inherit;border:1.5px solid rgba(255,255,255,.35);border-radius:8px;min-height:38px;padding:0 12px;cursor:pointer}
+.msg{margin:0;padding:12px 14px;border-radius:10px;font-weight:600}
+.msg.warn{background:var(--warn-bg);color:var(--warn-fg)}
+.msg.err{background:var(--err-bg);color:var(--err-fg)}
+.msg.ok{background:var(--ok-bg);color:var(--ok-fg)}
+.msg.info{background:var(--info-bg);color:var(--info-fg)}
+.muted{color:var(--muted)}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px 20px;margin:0}
+.kv div{min-width:0}
+.kv dt{font-size:.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.kv dd{margin:2px 0 0;overflow-wrap:anywhere}
+.nome-grande{font-family:var(--font-display);font-size:1.6rem;font-weight:600}
+.tag{display:inline-block;background:var(--soft);color:var(--info-fg);border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:700}
+.doc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);grid-template-areas:"dados papel" "assin papel";gap:20px;align-items:start}
+#c-dados{grid-area:dados}
+.doc-papel{grid-area:papel;min-width:0}
+.doc-assin{grid-area:assin}
+@media (max-width:860px){.doc-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"dados" "papel" "assin"}}
+.so-cliente{display:none}
+body.modo-cliente header.top,body.modo-cliente .so-atendente{display:none}
+body.modo-cliente .so-cliente{display:inline-flex;align-items:center;justify-content:center}
+body.modo-cliente .pad{height:clamp(240px,40vh,380px)}
+@media (pointer:coarse){.btn.sm,.ghost{min-height:44px}}
+.papel{background:#fff;color:#1c2830;border:1px solid var(--line);border-radius:6px;overflow:hidden;box-shadow:0 6px 24px rgba(19,12,14,.08)}
+.papel .faixa{height:34px;display:block;width:100%}
+.papel .corpo{padding:26px 30px 30px;display:grid;gap:12px}
+.papel .emp{font-family:var(--font-display);font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:#1e756a;font-weight:700}
+.papel h3{font-size:1.7rem;color:#130c0e}
+.papel .sub{color:#2f4858;font-weight:600}
+.papel hr{border:0;border-top:3px solid #18b68c;width:44px;margin:4px 0}
+.papel .saud{font-family:var(--font-display);font-size:1.15rem;font-weight:600;color:#130c0e}
+.papel p{margin:0;line-height:1.65}
+.papel .rodape{font-size:.74rem;color:#5a6b78;margin-top:6px}
+.assin{display:grid;gap:10px}
+.pad{position:relative;background:var(--pad-bg);border:2px dashed var(--line);border-radius:12px;height:clamp(200px,30vh,300px);touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.pad canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;border-radius:10px}
+.pad .dica{position:absolute;left:0;right:0;bottom:46px;text-align:center;color:#8a99a6;pointer-events:none;font-weight:600}
+.pad .linha{position:absolute;left:24px;right:24px;bottom:40px;border-top:1.5px solid #b9c6d2;pointer-events:none}
+.lista{display:grid;gap:10px}
+.item{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.item .info{min-width:0;flex:1 1 260px}
+.item .info b{display:block;overflow-wrap:anywhere}
+.item .info span{font-size:.86rem;color:var(--muted)}
+.subtabs{display:flex;gap:6px;flex-wrap:wrap}
+.subtabs button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;min-height:42px;cursor:pointer;font-weight:700;color:var(--muted)}
+.subtabs button[aria-current="page"]{background:var(--btn-bg);border-color:var(--btn-bg);color:var(--btn-fg)}
+.login{max-width:440px;margin:9vh auto 0}
+.login .faixa{height:56px;border-radius:10px;overflow:hidden;margin-bottom:22px}
+.login .faixa svg{width:100%;height:100%;display:block}
+.chk{display:flex;gap:10px;align-items:flex-start;font-weight:600;color:var(--fg);font-size:.95rem;letter-spacing:0;margin:0}
+.chk input{width:22px;height:22px;margin-top:2px;flex:none}
+code{background:var(--soft);padding:1px 6px;border-radius:5px;font-size:.88em}
+ol.passos{margin:0;padding-left:20px;display:grid;gap:8px}
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:700;z-index:50;max-width:90vw}
+@media (prefers-reduced-motion:no-preference){.card{transition:box-shadow .2s}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ===================================================================
+   CONFIGURAÇÃO: troque os dois valores abaixo pelos do SEU projeto
+   Supabase (Project Settings > API). A chave "anon" ou "publishable"
+   é pública por desenho. Quem protege os dados são as regras (RLS)
+   criadas pelo arquivo supabase-setup-bonus.sql.
+   NUNCA cole aqui a chave "service_role".
+   =================================================================== */
+const CFG = {
+  SUPABASE_URL: 'https://enpigjradsighhfcbanu.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_tFVXG1aAyUM1Y6HXJqZ9Gg_AM7hg5_t'
+};
+</script>
+<script>
+'use strict';
+
+// <helpers>
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function onlyDigits(s){ return String(s == null ? '' : s).replace(/\D/g, ''); }
+function fmtCPF(d){ d = onlyDigits(d); return d.length === 11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : d; }
+function maskCPFLista(d){ d = onlyDigits(d); return d.length === 11 ? d.slice(0,3) + '.***.***-' + d.slice(9) : d; }
+function validCPF(c){
+  if (!/^\d{11}$/.test(c) || /^(\d)\1{10}$/.test(c)) return false;
+  for (var t = 9; t < 11; t++){
+    var s = 0;
+    for (var i = 0; i < t; i++) s += Number(c[i]) * (t + 1 - i);
+    var d = ((s * 10) % 11) % 10;
+    if (d !== Number(c[t])) return false;
+  }
+  return true;
+}
+function norm(s){ return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
+function parseValor(s){
+  s = String(s == null ? '' : s).replace(/[^\d,.\-]/g, '');
+  if (!s) return null;
+  if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  var n = parseFloat(s);
+  return isFinite(n) ? n : null;
+}
+function brl(v){ return new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'}).format(v).replace(/ /g, ' '); }
+function valorInput(v){ return (v == null || v === '') ? '' : Number(v).toFixed(2).replace('.', ','); }
+var U = ['zero','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
+var D = ['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];
+var C = ['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];
+function ate999(n){
+  if (n === 100) return 'cem';
+  var c = Math.floor(n / 100), r = n % 100, p = [];
+  if (c) p.push(C[c]);
+  if (r){
+    if (r < 20) p.push(U[r]);
+    else { var d = Math.floor(r / 10), u = r % 10; p.push(u ? D[d] + ' e ' + U[u] : D[d]); }
+  }
+  return p.join(' e ');
+}
+function inteiroExtenso(n){
+  if (n === 0) return 'zero';
+  var milhoes = Math.floor(n / 1e6), milhares = Math.floor((n % 1e6) / 1e3), resto = n % 1e3;
+  var partes = [], valores = [];
+  if (milhoes){ partes.push(ate999(milhoes) + (milhoes === 1 ? ' milhão' : ' milhões')); valores.push(milhoes); }
+  if (milhares){ partes.push(milhares === 1 ? 'mil' : ate999(milhares) + ' mil'); valores.push(milhares); }
+  if (resto){ partes.push(ate999(resto)); valores.push(resto); }
+  var out = '';
+  partes.forEach(function(p, i){
+    if (i === 0){ out = p; return; }
+    var ultimo = i === partes.length - 1, v = valores[i];
+    out += ((ultimo && (v < 100 || v % 100 === 0)) ? ' e ' : ' ') + p;
+  });
+  return out;
+}
+function valorExtenso(v){
+  var cent = Math.round(v * 100), reais = Math.floor(cent / 100), cts = cent % 100, t = '';
+  if (reais){
+    t = inteiroExtenso(reais) + (reais === 1 ? ' real' : ' reais');
+    if (reais % 1e6 === 0) t = t.replace(/ reais$/, ' de reais');
+  }
+  if (cts) t += (t ? ' e ' : '') + inteiroExtenso(cts) + (cts === 1 ? ' centavo' : ' centavos');
+  return t || 'zero real';
+}
+function dataLonga(d){ return d.getDate() + ' de ' + MESES[d.getMonth()] + ' de ' + d.getFullYear(); }
+function dataISOparaDate(iso){ var p = String(iso).split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])); }
+function dataISOparaBR(iso){ var p = String(iso).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+function hojeISO(){ var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function titulo(s){
+  var peq = ['de','da','do','dos','das','e'];
+  return String(s || '').toLowerCase().split(/\s+/).filter(Boolean).map(function(w, i){
+    return (i > 0 && peq.indexOf(w) >= 0) ? w : w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(' ');
+}
+function slug(s){ return norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'cliente'; }
+function novoId(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+    var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+  });
+}
+function mosaico(n, h){
+  var cores = ['#18b68c','#1e756a','#4ed8b0','#2d8c7e','#2f4858'], b = h * 1.1, s = '';
+  for (var i = 0; i < n; i++){
+    var x = i * b / 2, pts = i % 2 === 0
+      ? x + ',' + h + ' ' + (x + b) + ',' + h + ' ' + (x + b / 2) + ',0'
+      : x + ',0 ' + (x + b) + ',0 ' + (x + b / 2) + ',' + h;
+    s += '<polygon points="' + pts + '" fill="' + cores[i % cores.length] + '" stroke="#fff" stroke-width=".5"/>';
+  }
+  return '<svg viewBox="0 0 ' + (n * b / 2 + b / 2) + ' ' + h + '" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + s + '</svg>';
+}
+// </helpers>
+
+(function(){
+var BUCKET = 'documentos';
+var app = document.getElementById('app');
+function $(s, r){ return (r || document).querySelector(s); }
+
+var S = {
+  sb: null, user: null, papel: 'operador',
+  cfg: { empreendimento: 'EPLENUM RESERVE', empresa: 'Emais Urbanismo', valor_padrao: null, texto_complementar: '', responsavel: '' },
+  view: 'busca', cliente: null, ultimo: null, pad: null, adminTab: 'base', imp: null
+};
+
+function msg(texto, tipo){ return '<p class="msg ' + (tipo || 'info') + '">' + esc(texto) + '</p>'; }
+function toast(t){
+  var el = document.createElement('div'); el.className = 'toast'; el.textContent = t; el.setAttribute('role', 'status');
+  document.body.appendChild(el); setTimeout(function(){ el.remove(); }, 3600);
+}
+function traduzErro(e){
+  var m = (e && e.message) || String(e);
+  if (/Invalid login credentials/i.test(m)) return 'E-mail ou senha incorretos.';
+  if (/Email not confirmed/i.test(m)) return 'Este usuário ainda não foi confirmado no Supabase.';
+  if (/signups? not allowed/i.test(m)) return 'O cadastro está desligado neste projeto. Crie o usuário no painel do Supabase.';
+  if (/already registered/i.test(m)) return 'Este e-mail já tem cadastro. Volte e entre com ele.';
+  if (/Password should be at least/i.test(m)) return 'A senha é curta demais. Use pelo menos 8 caracteres.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sem conexão com o servidor. Verifique a internet.';
+  return m;
+}
+function configurado(){
+  return CFG.SUPABASE_URL.indexOf('COLE_AQUI') < 0 && CFG.SUPABASE_ANON_KEY.indexOf('COLE_AQUI') < 0;
+}
+
+/* ---------------- telas de entrada ---------------- */
+function renderSetup(){
+  app.innerHTML = '<div class="wrap"><div class="card login stack"><h2>Falta ligar ao seu Supabase</h2>' +
+    '<ol class="passos"><li>No SQL Editor do projeto, rode o arquivo <code>supabase-setup-bonus.sql</code>.</li>' +
+    '<li>Em Project Settings, API, copie a URL e a chave pública (anon ou publishable).</li>' +
+    '<li>Cole os dois valores nas primeiras linhas do script deste arquivo, em <code>CFG</code>, e publique de novo.</li></ol></div></div>';
+}
+function renderLogin(erro){
+  app.innerHTML = '<div class="wrap"><form id="f-login" class="card login stack" autocomplete="on">' +
+    '<div class="faixa">' + mosaico(26, 28) + '</div>' +
+    '<div><h2>Cheque Bônus</h2><p class="muted" style="margin:4px 0 0">EPLENUM RESERVE. Acesso restrito à equipe autorizada.</p></div>' +
+    '<div><label for="email">E-mail</label><input id="email" type="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div>' +
+    '<div><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required></div>' +
+    '<div id="login-msg">' + (erro ? msg(erro, 'err') : '') + '</div>' +
+    '<button class="btn" id="entrar" type="submit">Entrar</button><div id="primeiro"></div></form></div>';
+  $('#f-login').addEventListener('submit', async function(ev){
+    ev.preventDefault();
+    var btn = $('#entrar'); btn.disabled = true; btn.textContent = 'Entrando...';
+    var r = await S.sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#senha').value });
+    if (r.error){
+      btn.disabled = false; btn.textContent = 'Entrar';
+      $('#login-msg').innerHTML = msg(traduzErro(r.error), 'err');
+      return;
+    }
+    await entrar(r.data.user);
+  });
+  S.sb.rpc('existe_admin').then(function(r){
+    if (r.error || r.data !== false || !$('#primeiro')) return;
+    $('#primeiro').innerHTML = '<button class="btn sec" id="criar-adm" type="button" style="width:100%">Primeiro acesso: criar administrador</button>';
+    $('#criar-adm').addEventListener('click', renderPrimeiroAcesso);
+  });
+}
+/* Encerra a sessão sozinho quando o tablet fica parado. Troque o número para mudar o tempo. */
+var INATIVIDADE_MIN = 15, timerInat = null;
+function zerarInatividade(){
+  if (!S.user) return;
+  clearTimeout(timerInat);
+  timerInat = setTimeout(function(){
+    if (S.user){ sair(); toast('Sessão encerrada por inatividade'); }
+  }, INATIVIDADE_MIN * 60000);
+}
+['pointerdown', 'keydown'].forEach(function(ev){ document.addEventListener(ev, zerarInatividade, { passive: true }); });
+async function chamarUsuarios(body){
+  var r = await S.sb.functions.invoke('gerenciar-usuarios', { body: body });
+  if (r.error){
+    var m = r.error.message;
+    try {
+      if (r.error.context && r.error.context.json){
+        var j = await r.error.context.json();
+        if (j && j.erro) m = j.erro;
+      }
+    } catch (e){}
+    throw new Error(m);
+  }
+  if (r.data && r.data.erro) throw new Error(r.data.erro);
+  return r.data;
+}
+function gerarSenha(){
+  var al = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789', b = new Uint32Array(10), s = '';
+  crypto.getRandomValues(b);
+  for (var i = 0; i < b.length; i++) s += al.charAt(b[i] % al.length);
+  return s;
+}
+function renderPrimeiroAcesso(){
+  app.innerHTML = '<div class="wrap"><form id="f-novo" class="card login stack" autocomplete="on">' +
+    '<div class="faixa">' + mosaico(26, 28) + '</div>' +
+    '<div><h2>Criar administrador</h2><p class="muted" style="margin:4px 0 0">Use o seu e-mail e escolha uma senha. Esta conta será a administradora do sistema.</p></div>' +
+    '<div><label for="n-email">E-mail</label><input id="n-email" type="email" autocomplete="username" required></div>' +
+    '<div><label for="n-senha">Senha (mínimo 8 caracteres)</label><input id="n-senha" type="password" autocomplete="new-password" minlength="8" required></div>' +
+    '<div><label for="n-senha2">Repita a senha</label><input id="n-senha2" type="password" autocomplete="new-password" minlength="8" required></div>' +
+    '<div id="novo-msg"></div>' +
+    '<button class="btn" id="criar" type="submit">Criar conta</button>' +
+    '<button class="btn sec" id="voltar-login" type="button">Voltar ao login</button></form></div>';
+  $('#voltar-login').addEventListener('click', function(){ renderLogin(); });
+  $('#f-novo').addEventListener('submit', async function(ev){
+    ev.preventDefault();
+    var out = $('#novo-msg'), email = $('#n-email').value.trim(), s1 = $('#n-senha').value;
+    if (s1 !== $('#n-senha2').value){ out.innerHTML = msg('As senhas não são iguais.', 'warn'); return; }
+    var btn = $('#criar'); btn.disabled = true; btn.textContent = 'Criando...';
+    try {
+      await chamarUsuarios({ acao: 'primeiro_admin', email: email, senha: s1 });
+      var li = await S.sb.auth.signInWithPassword({ email: email, password: s1 });
+      if (li.error) throw li.error;
+      await entrar(li.data.user);
+    } catch (e){
+      btn.disabled = false; btn.textContent = 'Criar conta';
+      out.innerHTML = msg(traduzErro(e), 'err');
+    }
+  });
+}
+async function entrar(user){
+  S.user = user;
+  zerarInatividade();
+  var p = await S.sb.from('perfis').select('papel').eq('id', user.id).maybeSingle();
+  S.papel = (p.data && p.data.papel) || 'operador';
+  var c = await S.sb.from('configuracoes').select('valor').eq('chave', 'documento').maybeSingle();
+  if (c.data && c.data.valor) S.cfg = Object.assign(S.cfg, c.data.valor);
+  var ea = await S.sb.rpc('existe_admin');
+  S.semAdmin = ea.error ? false : ea.data === false;
+  S.view = 'busca'; S.cliente = null;
+  render();
+}
+function sair(){ S.sb.auth.signOut(); }
+
+/* ---------------- estrutura geral ---------------- */
+function shell(inner){
+  var aba = S.view === 'docs' ? 'docs' : (S.view === 'admin' ? 'admin' : 'busca');
+  function t(id, nome){ return '<button data-nav="' + id + '"' + (aba === id ? ' aria-current="page"' : '') + '>' + nome + '</button>'; }
+  return '<header class="top"><div class="wrap topin">' +
+    '<div class="brand">' + mosaico(9, 30) + '<div><b>Cheque Bônus</b><small>' + esc(S.cfg.empreendimento) + '</small></div></div>' +
+    '<nav class="tabs" aria-label="Seções">' + t('busca', 'Atendimento') + t('docs', 'Documentos') + (S.papel === 'admin' ? t('admin', 'Administração') : '') + '</nav>' +
+    '<div class="who"><span title="' + esc(S.user.email) + '">' + esc(S.user.email) + '</span><button class="ghost" id="sair">Sair</button></div>' +
+    '</div></header><main class="wrap">' + bannerAdmin() + inner + '</main>';
+}
+function bannerAdmin(){
+  if (!S.semAdmin) return '';
+  return '<section class="card stack"><span class="tag">Primeiro acesso</span><h3>Este sistema ainda não tem administrador</h3>' +
+    '<p class="muted" style="margin:0">Ao ativar, a sua conta passa a ser a administradora: importa a base, edita o documento e vê todos os documentos. Só a primeira conta criada pode fazer isso, uma única vez.</p>' +
+    '<div id="admin-msg"></div><button class="btn" id="ativar-admin">Ativar meu acesso de administrador</button></section>';
+}
+async function ativarAdmin(){
+  var b = $('#ativar-admin'); b.disabled = true;
+  var r = await S.sb.rpc('reivindicar_admin');
+  if (r.error){ b.disabled = false; $('#admin-msg').innerHTML = msg(traduzErro(r.error), 'err'); return; }
+  S.papel = 'admin'; S.semAdmin = false; toast('Você agora é administrador'); render();
+}
+function ligarShell(){
+  $('#sair').addEventListener('click', sair);
+  var at = $('#ativar-admin'); if (at) at.addEventListener('click', ativarAdmin);
+  document.querySelectorAll('[data-nav]').forEach(function(b){
+    b.addEventListener('click', function(){
+      S.view = b.getAttribute('data-nav');
+      if (S.view === 'busca') S.cliente = null;
+      render();
+    });
+  });
+}
+function render(){
+  document.body.classList.remove('modo-cliente');
+  if (S.view === 'busca') return renderBusca();
+  if (S.view === 'doc') return renderDoc();
+  if (S.view === 'ok') return renderOk();
+  if (S.view === 'docs') return renderDocs();
+  if (S.view === 'admin' && S.papel === 'admin') return renderAdmin();
+  S.view = 'busca'; renderBusca();
+}
+
+/* ---------------- busca por CPF ---------------- */
+function renderBusca(){
+  app.innerHTML = shell(
+    '<section class="card stack"><div><h2>Buscar cliente</h2><p class="muted" style="margin:4px 0 0">Digite o CPF do cliente para localizar o cadastro.</p></div>' +
+    '<div class="row"><div class="grow"><label for="cpf">CPF</label><input id="cpf" class="cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14"></div>' +
+    '<button class="btn" id="buscar">Buscar</button></div></section><div id="resultado"></div>');
+  ligarShell();
+  var cpf = $('#cpf');
+  cpf.addEventListener('input', function(){
+    var d = onlyDigits(cpf.value).slice(0, 11), o = d;
+    if (d.length > 9) o = d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6,9) + '-' + d.slice(9);
+    else if (d.length > 6) o = d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6);
+    else if (d.length > 3) o = d.slice(0,3) + '.' + d.slice(3);
+    cpf.value = o;
+  });
+  cpf.addEventListener('keydown', function(e){ if (e.key === 'Enter') buscar(); });
+  $('#buscar').addEventListener('click', buscar);
+  if (S.cliente){ cpf.value = fmtCPF(S.cliente.cpf); mostrarCliente(); } else cpf.focus();
+}
+async function buscar(){
+  var d = onlyDigits($('#cpf').value), out = $('#resultado');
+  if (d.length !== 11){ out.innerHTML = msg('Digite os 11 números do CPF.', 'warn'); return; }
+  out.innerHTML = msg('Buscando...', 'info');
+  var r = await S.sb.rpc('buscar_cliente', { p_cpf: d });
+  if (r.error){ out.innerHTML = msg('Erro na busca: ' + traduzErro(r.error), 'err'); return; }
+  if (!r.data || !r.data.length){ S.cliente = null; out.innerHTML = msg('CPF não encontrado na base.', 'warn'); return; }
+  S.cliente = r.data[0];
+  mostrarCliente();
+}
+function mostrarCliente(){
+  var c = S.cliente, dados = c.dados || {}, extras = [];
+  Object.keys(dados).forEach(function(k){
+    var v = dados[k], nk = norm(k);
+    if (v === '' || v == null || nk.indexOf('cpf') >= 0 || String(v) === c.nome) return;
+    extras.push('<div><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>');
+  });
+  $('#resultado').innerHTML = '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center">' +
+    '<div style="min-width:0"><span class="tag">Cliente encontrado</span><div class="nome-grande" style="margin-top:6px;overflow-wrap:anywhere">' + esc(titulo(c.nome)) + '</div></div>' +
+    '<button class="btn" id="gerar">Selecionar e gerar documento</button></div>' +
+    '<dl class="kv"><div><dt>CPF</dt><dd>' + esc(fmtCPF(c.cpf)) + '</dd></div>' +
+    (c.valor_bonus != null ? '<div><dt>Valor do bônus na base</dt><dd>' + esc(brl(Number(c.valor_bonus))) + '</dd></div>' : '') +
+    extras.slice(0, 10).join('') + '</dl></section>';
+  $('#gerar').addEventListener('click', function(){ S.view = 'doc'; render(); });
+}
+
+/* ---------------- documento e assinatura ---------------- */
+function paragrafos(v){
+  var emp = S.cfg.empreendimento || 'EPLENUM RESERVE', empresa = S.cfg.empresa || 'Emais Urbanismo';
+  var vv = v.valor ? ' no valor de ' + brl(v.valor) + ' (' + valorExtenso(v.valor) + ')' : '';
+  var p = [];
+  p.push('A ' + empresa + ' parabeniza ' + v.nome + ', portador(a) do CPF nº ' + fmtCPF(v.cpf) + ', pela conquista do Cheque Bônus' + vv + '.');
+  p.push('O Cheque Bônus está sendo retirado nesta data, ' + dataLonga(v.data) + ', e poderá ser utilizado no lançamento do empreendimento ' + emp + '.');
+  if (S.cfg.texto_complementar && String(S.cfg.texto_complementar).trim()) p.push(String(S.cfg.texto_complementar).trim());
+  p.push('Ao assinar abaixo, o(a) cliente confirma a retirada do Cheque Bônus na data indicada.');
+  return p;
+}
+function lerFormDoc(){
+  var c = S.cliente, ds = $('#data').value || hojeISO();
+  var vtxt = $('#valor').value.trim();
+  return { nome: titulo(c.nome), cpf: c.cpf, valor: vtxt ? parseValor(vtxt) : null, dataISO: ds, data: dataISOparaDate(ds) };
+}
+function atualizarPapel(){
+  var v = lerFormDoc(), emp = S.cfg.empreendimento || 'EPLENUM RESERVE';
+  var primeiro = v.nome.split(' ')[0] || '';
+  $('#papel').innerHTML = '<div class="faixa">' + mosaico(40, 34) + '</div><div class="corpo">' +
+    '<div class="emp">' + esc(S.cfg.empresa || 'Emais Urbanismo') + '</div><h3>Parabenização</h3>' +
+    '<div class="sub">Cheque Bônus ' + esc(emp) + '</div><hr>' +
+    '<div class="saud">Parabéns, ' + esc(primeiro) + '!</div>' +
+    paragrafos(v).map(function(t){ return '<p>' + esc(t) + '</p>'; }).join('') +
+    '<div class="rodape">Assinatura do(a) cliente abaixo da confirmação, na tela do tablet.</div></div>';
+}
+function renderDoc(){
+  var c = S.cliente;
+  if (!c){ S.view = 'busca'; return renderBusca(); }
+  var inicial = c.valor_bonus != null ? c.valor_bonus : S.cfg.valor_padrao;
+  app.innerHTML = shell(
+    '<div class="row so-atendente" style="align-items:center"><button class="btn sec sm" id="voltar">Voltar</button><h2>Documento de ' + esc(titulo(c.nome)) + '</h2></div>' +
+    '<div class="doc-grid"><section class="card stack so-atendente" id="c-dados"><h3>Dados do documento</h3>' +
+    '<div><label for="valor">Valor do Cheque Bônus (R$)</label><input id="valor" type="text" inputmode="decimal" placeholder="Ex.: 1.500,00" value="' + esc(valorInput(inicial)) + '"></div>' +
+    '<div><label for="data">Data de retirada</label><input id="data" type="date" value="' + esc(hojeISO()) + '"></div>' +
+    '<button class="btn" id="modo-cliente" type="button">Entregar ao cliente para assinar</button>' +
+    '<p class="muted" style="margin:0">O cliente lê o documento e assina em seguida. O menu fica escondido enquanto ele assina.</p></section>' +
+    '<section class="doc-papel"><div class="papel" id="papel"></div></section>' +
+    '<section class="card stack doc-assin"><div class="assin"><h3>Assinatura do cliente</h3><div class="pad" id="padbox"><canvas id="sig" aria-label="Área de assinatura"></canvas><div class="linha"></div><div class="dica" id="dica">Assine aqui com o dedo ou a caneta</div></div>' +
+    '<div class="row"><button class="btn sec sm" id="limpar" type="button">Limpar assinatura</button><button class="btn sec sm so-cliente" id="sair-modo" type="button">Voltar ao atendente</button></div></div>' +
+    '<div id="doc-msg"></div><button class="btn" id="salvar" disabled>Confirmar assinatura e salvar</button></section></div>');
+  ligarShell();
+  $('#voltar').addEventListener('click', function(){ S.view = 'busca'; render(); });
+  atualizarPapel();
+  $('#valor').addEventListener('input', atualizarPapel);
+  $('#data').addEventListener('input', atualizarPapel);
+  S.pad = criarPad($('#sig'), function(sujo){ $('#salvar').disabled = !sujo; $('#dica').style.display = sujo ? 'none' : ''; });
+  $('#limpar').addEventListener('click', function(){ S.pad.limpar(); });
+  $('#modo-cliente').addEventListener('click', function(){ document.body.classList.add('modo-cliente'); window.scrollTo(0, 0); });
+  $('#sair-modo').addEventListener('click', function(){ document.body.classList.remove('modo-cliente'); window.scrollTo(0, 0); });
+  $('#salvar').addEventListener('click', salvar);
+}
+function criarPad(canvas, aoMudar){
+  var ctx = canvas.getContext('2d'), desenhando = false, last = null, prevMid = null, sujo = false, largura = 0, altura = 0;
+  function estilo(){ ctx.lineWidth = 2.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#0b1b2b'; ctx.fillStyle = '#0b1b2b'; }
+  function ajustar(){
+    var r = canvas.getBoundingClientRect(); if (!r.width || (Math.round(r.width) === largura && Math.round(r.height) === altura)) return;
+    var dpr = window.devicePixelRatio || 1, img = sujo ? canvas.toDataURL() : null;
+    largura = Math.round(r.width); altura = Math.round(r.height);
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); estilo();
+    if (img){ var im = new Image(); im.onload = function(){ ctx.drawImage(im, 0, 0, r.width, r.height); }; im.src = img; }
+  }
+  function pos(e){ var r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  canvas.addEventListener('pointerdown', function(e){
+    e.preventDefault(); canvas.setPointerCapture(e.pointerId);
+    desenhando = true; last = pos(e); prevMid = last;
+    ctx.beginPath(); ctx.arc(last.x, last.y, 1.4, 0, Math.PI * 2); ctx.fill();
+    if (!sujo){ sujo = true; aoMudar(true); }
+  });
+  canvas.addEventListener('pointermove', function(e){
+    if (!desenhando) return; e.preventDefault();
+    var p = pos(e), mid = { x: (last.x + p.x) / 2, y: (last.y + p.y) / 2 };
+    ctx.beginPath(); ctx.moveTo(prevMid.x, prevMid.y); ctx.quadraticCurveTo(last.x, last.y, mid.x, mid.y); ctx.stroke();
+    last = p; prevMid = mid;
+  });
+  function fim(){ desenhando = false; }
+  canvas.addEventListener('pointerup', fim); canvas.addEventListener('pointercancel', fim); canvas.addEventListener('pointerleave', fim);
+  if (window.ResizeObserver) new ResizeObserver(ajustar).observe(canvas); else window.addEventListener('resize', ajustar);
+  ajustar();
+  return {
+    limpar: function(){ ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.restore(); sujo = false; aoMudar(false); },
+    vazio: function(){ return !sujo; },
+    dataURL: function(){ return canvas.toDataURL('image/png'); },
+    blob: function(){ return new Promise(function(r){ canvas.toBlob(r, 'image/png'); }); },
+    w: function(){ return canvas.width; }, h: function(){ return canvas.height; }
+  };
+}
+function gerarPDF(d){
+  var jsPDF = window.jspdf.jsPDF, doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  var W = 210, M = 22, emp = S.cfg.empreendimento || 'EPLENUM RESERVE', empresa = S.cfg.empresa || 'Emais Urbanismo';
+  var cores = [[24,182,140],[30,117,106],[78,216,176],[45,140,126],[47,72,88]], b = 18, h = 16;
+  for (var i = 0; i < 30; i++){
+    var x0 = i * b / 2 - 9; doc.setFillColor.apply(doc, cores[i % cores.length]);
+    if (i % 2 === 0) doc.triangle(x0, h, x0 + b, h, x0 + b / 2, 0, 'F'); else doc.triangle(x0, 0, x0 + b, 0, x0 + b / 2, h, 'F');
+  }
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(30,117,106); doc.text(empresa.toUpperCase(), M, 34, { charSpace: 0.6 });
+  doc.setFontSize(26); doc.setTextColor(19,12,14); doc.text('Parabenização', M, 47);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(13); doc.setTextColor(47,72,88); doc.text('Cheque Bônus ' + emp, M, 55);
+  doc.setDrawColor(24,182,140); doc.setLineWidth(0.9); doc.line(M, 61, M + 28, 61);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(19,12,14);
+  doc.text('Parabéns, ' + (d.nome.split(' ')[0] || '') + '!', M, 76);
+  var y = 88; doc.setFont('helvetica', 'normal'); doc.setFontSize(12); doc.setTextColor(30,40,48);
+  paragrafos(d).forEach(function(p){
+    var lines = doc.splitTextToSize(p, W - 2 * M);
+    doc.text(lines, M, y, { lineHeightFactor: 1.5 });
+    y += lines.length * 6.4 + 5;
+  });
+  if (y + 62 > 280){ doc.addPage(); y = 30; }
+  var by = Math.max(y + 16, 200), bw = 100, bh = 28;
+  var iw = bw, ih = bw * d.sigH / d.sigW; if (ih > bh){ ih = bh; iw = bh * d.sigW / d.sigH; }
+  doc.addImage(d.sigURL, 'PNG', M + (bw - iw) / 2, by + bh - ih, iw, ih);
+  doc.setDrawColor(19,12,14); doc.setLineWidth(0.3); doc.line(M, by + bh + 1, M + bw, by + bh + 1);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(19,12,14); doc.text(d.nome, M, by + bh + 6);
+  doc.setFont('helvetica', 'normal'); doc.text('CPF ' + fmtCPF(d.cpf), M, by + bh + 11);
+  doc.setFontSize(9); doc.setTextColor(74,96,112); doc.text('Assinatura do(a) cliente', M, by + bh + 16);
+  if (S.cfg.responsavel && String(S.cfg.responsavel).trim()) doc.text('Responsável pela entrega: ' + String(S.cfg.responsavel).trim(), M, by + bh + 24);
+  doc.setFontSize(8); doc.setTextColor(110,126,138);
+  doc.text('Protocolo ' + d.protocolo + '  |  Gerado em ' + new Date().toLocaleString('pt-BR'), M, 288);
+  return doc.output('blob');
+}
+async function salvar(){
+  var btn = $('#salvar'), out = $('#doc-msg'), c = S.cliente;
+  if (S.pad.vazio()){ out.innerHTML = msg('Peça ao cliente para assinar na área indicada.', 'warn'); return; }
+  var f = lerFormDoc();
+  if ($('#valor').value.trim() && (f.valor == null || f.valor <= 0)){ out.innerHTML = msg('O valor informado não é válido.', 'warn'); return; }
+  btn.disabled = true; btn.textContent = 'Salvando...'; out.innerHTML = '';
+  try {
+    var id = novoId(), protocolo = id.slice(0, 8).toUpperCase(), base = S.user.id + '/' + id;
+    var pdf = gerarPDF({ nome: f.nome, cpf: f.cpf, valor: f.valor, data: f.data, protocolo: protocolo,
+      sigURL: S.pad.dataURL(), sigW: S.pad.w(), sigH: S.pad.h() });
+    var sig = await S.pad.blob();
+    var up1 = await S.sb.storage.from(BUCKET).upload(base + '.pdf', pdf, { contentType: 'application/pdf' });
+    if (up1.error) throw up1.error;
+    var up2 = await S.sb.storage.from(BUCKET).upload(base + '-assinatura.png', sig, { contentType: 'image/png' });
+    if (up2.error) throw up2.error;
+    var ins = await S.sb.from('documentos_bonus').insert({
+      id: id, cliente_id: c.id, cpf: c.cpf, nome: f.nome, valor_bonus: f.valor,
+      empreendimento: S.cfg.empreendimento || 'EPLENUM RESERVE', data_retirada: f.dataISO,
+      assinatura_path: base + '-assinatura.png', pdf_path: base + '.pdf'
+    });
+    if (ins.error) throw ins.error;
+    S.ultimo = { blob: pdf, nome: 'Cheque-Bonus-' + slug(f.nome) + '-' + protocolo + '.pdf', protocolo: protocolo, cliente: f.nome };
+    S.view = 'ok'; render();
+  } catch (e){
+    btn.disabled = false; btn.textContent = 'Confirmar assinatura e salvar';
+    out.innerHTML = msg('Não foi possível salvar: ' + traduzErro(e), 'err');
+  }
+}
+function renderOk(){
+  var u = S.ultimo;
+  if (!u){ S.view = 'busca'; return renderBusca(); }
+  app.innerHTML = shell('<section class="card stack"><span class="tag">Documento salvo</span><h2>Pronto, ' + esc(u.cliente) + ' assinou.</h2>' +
+    '<p class="muted" style="margin:0">Protocolo <b>' + esc(u.protocolo) + '</b>. O PDF assinado ficou guardado e já pode ser baixado. Agora a entrega física do cheque pode ser feita.</p>' +
+    '<div class="row"><button class="btn" id="baixar-pdf">Baixar PDF</button><button class="btn sec" id="novo">Novo atendimento</button></div></section>');
+  ligarShell();
+  $('#baixar-pdf').addEventListener('click', function(){ baixarBlob(u.blob, u.nome); });
+  $('#novo').addEventListener('click', function(){ S.cliente = null; S.ultimo = null; S.view = 'busca'; render(); });
+}
+function baixarBlob(blob, nome){
+  var url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+}
+
+/* ---------------- documentos gerados ---------------- */
+async function renderDocs(){
+  app.innerHTML = shell('<section class="card stack"><div class="row" style="align-items:center;justify-content:space-between"><h2>Documentos gerados</h2>' +
+    '<div class="grow" style="max-width:340px"><label for="filtro">Filtrar por nome ou CPF</label><input id="filtro" type="text" autocomplete="off"></div></div>' +
+    '<div id="lista" class="lista">' + msg('Carregando...', 'info') + '</div></section>');
+  ligarShell();
+  var r = await S.sb.from('documentos_bonus').select('id,numero,cpf,nome,valor_bonus,data_retirada,criado_em,criado_por,pdf_path').order('criado_em', { ascending: false }).limit(300);
+  var lista = $('#lista');
+  if (r.error){ lista.innerHTML = msg('Erro ao carregar: ' + traduzErro(r.error), 'err'); return; }
+  var docs = r.data || [], emails = {};
+  if (S.papel === 'admin'){
+    var pf = await S.sb.from('perfis').select('id,email');
+    (pf.data || []).forEach(function(p){ emails[p.id] = p.email; });
+  }
+  function desenhar(){
+    var q = norm($('#filtro').value), d = onlyDigits($('#filtro').value);
+    var vis = docs.filter(function(x){ return !q || norm(x.nome).indexOf(q) >= 0 || (d && x.cpf.indexOf(d) >= 0); });
+    if (!vis.length){ lista.innerHTML = msg(docs.length ? 'Nenhum documento com esse filtro.' : 'Nenhum documento gerado ainda.', 'info'); return; }
+    lista.innerHTML = vis.map(function(x){
+      return '<div class="item"><div class="info"><b>' + esc(x.nome) + '</b><span>CPF ' + esc(maskCPFLista(x.cpf)) +
+        (x.valor_bonus != null ? ' | ' + esc(brl(Number(x.valor_bonus))) : '') +
+        ' | Retirada ' + esc(dataISOparaBR(x.data_retirada)) + ' | Protocolo ' + esc(x.id.slice(0, 8).toUpperCase()) +
+        (S.papel === 'admin' && emails[x.criado_por] ? ' | Atendente ' + esc(emails[x.criado_por]) : '') + '</span></div>' +
+        '<button class="btn sec sm" data-pdf="' + esc(x.id) + '">Baixar PDF</button></div>';
+    }).join('');
+    lista.querySelectorAll('[data-pdf]').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var x = docs.find(function(y){ return y.id === b.getAttribute('data-pdf'); });
+        b.disabled = true;
+        var dl = await S.sb.storage.from(BUCKET).download(x.pdf_path);
+        b.disabled = false;
+        if (dl.error){ toast('Não foi possível baixar: ' + traduzErro(dl.error)); return; }
+        baixarBlob(dl.data, 'Cheque-Bonus-' + slug(x.nome) + '-' + x.id.slice(0, 8).toUpperCase() + '.pdf');
+      });
+    });
+  }
+  $('#filtro').addEventListener('input', desenhar);
+  desenhar();
+}
+
+/* ---------------- administração ---------------- */
+function renderAdmin(){
+  function t(id, nome){ return '<button data-sub="' + id + '"' + (S.adminTab === id ? ' aria-current="page"' : '') + '>' + nome + '</button>'; }
+  app.innerHTML = shell('<div class="subtabs">' + t('base', 'Base de clientes') + t('config', 'Configurações do documento') + t('usuarios', 'Usuários') + '</div><div id="admin-corpo"></div>');
+  ligarShell();
+  document.querySelectorAll('[data-sub]').forEach(function(b){
+    b.addEventListener('click', function(){ S.adminTab = b.getAttribute('data-sub'); renderAdmin(); });
+  });
+  if (S.adminTab === 'base') adminBase();
+  else if (S.adminTab === 'config') adminConfig();
+  else adminUsuarios();
+}
+async function adminBase(){
+  $('#admin-corpo').innerHTML = '<section class="card stack"><h2>Base de clientes</h2><div id="contagem">' + msg('Contando...', 'info') + '</div>' +
+    '<div><label for="arquivo">Planilha do Excel (.xlsx, .xls ou .csv)</label><input id="arquivo" type="file" accept=".xlsx,.xls,.csv"></div>' +
+    '<p class="muted" style="margin:0">A planilha precisa ter uma coluna com o CPF e outra com o nome. Uma coluna de valor do bônus é opcional. Todas as outras colunas ficam disponíveis na tela de busca.</p>' +
+    '<div id="imp"></div></section>';
+  var n = await S.sb.from('clientes').select('id', { count: 'exact', head: true });
+  $('#contagem').innerHTML = n.error ? msg('Não foi possível contar: ' + traduzErro(n.error), 'err') : msg('Clientes na base: ' + (n.count || 0), 'info');
+  $('#arquivo').addEventListener('change', async function(ev){
+    var f = ev.target.files[0]; if (!f) return;
+    try {
+      var wb = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true, dateNF: 'dd/mm/yyyy' });
+      var nomeAba = wb.SheetNames[0], rows = XLSX.utils.sheet_to_json(wb.Sheets[nomeAba], { defval: '', raw: false, dateNF: 'dd/mm/yyyy' });
+      if (!rows.length){ $('#imp').innerHTML = msg('A planilha está vazia.', 'warn'); return; }
+      var heads = Object.keys(rows[0]);
+      function achar(pred){ return heads.find(function(h){ return pred(norm(h)); }) || ''; }
+      S.imp = { rows: rows, heads: heads, aba: nomeAba, arq: f.name, map: {
+        cpf: achar(function(h){ return h.indexOf('cpf') >= 0; }),
+        nome: achar(function(h){ return h === 'nome' || h === 'cliente' || h.indexOf('nome') >= 0; }),
+        valor: achar(function(h){ return h.indexOf('valor') >= 0 || h.indexOf('bonus') >= 0; }) } };
+      impTela();
+    } catch (e){ $('#imp').innerHTML = msg('Não foi possível ler o arquivo: ' + traduzErro(e), 'err'); }
+  });
+}
+function processarImp(){
+  var m = S.imp.map, vistos = {}, validos = [], invalidos = [], dup = 0;
+  S.imp.rows.forEach(function(r, i){
+    var d = onlyDigits(r[m.cpf]); if (d.length > 0 && d.length < 11) d = d.padStart(11, '0');
+    var nome = String(r[m.nome] == null ? '' : r[m.nome]).trim();
+    if (!validCPF(d) || !nome){ invalidos.push(i + 2); return; }
+    if (vistos[d]) dup++;
+    var dados = {}; S.imp.heads.forEach(function(h){ var v = r[h]; if (v !== '' && v != null) dados[h] = String(v); });
+    vistos[d] = { cpf: d, nome: nome, valor_bonus: m.valor ? parseValor(r[m.valor]) : null, dados: dados };
+  });
+  Object.keys(vistos).forEach(function(k){ validos.push(vistos[k]); });
+  return { validos: validos, invalidos: invalidos, dup: dup };
+}
+function impTela(){
+  var m = S.imp.map;
+  function sel(id, rotulo, valor, opcional){
+    return '<div class="grow"><label for="' + id + '">' + rotulo + '</label><select id="' + id + '">' + (opcional ? '<option value="">(nenhuma)</option>' : '<option value="">Escolha a coluna</option>') +
+      S.imp.heads.map(function(h){ return '<option value="' + esc(h) + '"' + (h === valor ? ' selected' : '') + '>' + esc(h) + '</option>'; }).join('') + '</select></div>';
+  }
+  $('#imp').innerHTML = '<div class="stack"><div class="msg info">Arquivo: ' + esc(S.imp.arq) + ' (aba ' + esc(S.imp.aba) + ', ' + S.imp.rows.length + ' linhas)</div>' +
+    '<div class="row">' + sel('m-cpf', 'Coluna do CPF', m.cpf, false) + sel('m-nome', 'Coluna do nome', m.nome, false) + sel('m-valor', 'Coluna do valor do bônus', m.valor, true) + '</div>' +
+    '<div id="resumo"></div>' +
+    '<label class="chk"><input type="checkbox" id="substituir"> Apagar a base atual antes de importar (substitui tudo)</label>' +
+    '<button class="btn" id="importar">Importar</button><div id="imp-msg"></div></div>';
+  function atualizar(){
+    S.imp.map = { cpf: $('#m-cpf').value, nome: $('#m-nome').value, valor: $('#m-valor').value };
+    if (!S.imp.map.cpf || !S.imp.map.nome){ $('#resumo').innerHTML = msg('Escolha as colunas do CPF e do nome.', 'warn'); $('#importar').disabled = true; return; }
+    var p = processarImp();
+    $('#resumo').innerHTML = msg(p.validos.length + ' clientes válidos' + (p.dup ? ', ' + p.dup + ' CPF repetido(s) na planilha (vale a última linha)' : '') +
+      (p.invalidos.length ? ', ' + p.invalidos.length + ' linha(s) ignorada(s) por CPF inválido ou nome vazio (ex.: linhas ' + p.invalidos.slice(0, 6).join(', ') + ')' : '') + '.', p.invalidos.length ? 'warn' : 'ok');
+    $('#importar').disabled = !p.validos.length;
+  }
+  ['m-cpf', 'm-nome', 'm-valor'].forEach(function(id){ $('#' + id).addEventListener('change', atualizar); });
+  $('#substituir').addEventListener('change', function(){ $('#importar').textContent = this.checked ? 'Apagar a base e importar' : 'Importar'; });
+  $('#importar').addEventListener('click', importar);
+  atualizar();
+}
+async function importar(){
+  var btn = $('#importar'), out = $('#imp-msg'), p = processarImp(), subst = $('#substituir').checked;
+  btn.disabled = true; out.innerHTML = msg('Importando...', 'info');
+  try {
+    if (subst){
+      var del = await S.sb.from('clientes').delete().gt('id', 0);
+      if (del.error) throw del.error;
+    }
+    for (var i = 0; i < p.validos.length; i += 500){
+      var up = await S.sb.from('clientes').upsert(p.validos.slice(i, i + 500), { onConflict: 'cpf' });
+      if (up.error) throw up.error;
+      out.innerHTML = msg('Importando... ' + Math.min(i + 500, p.validos.length) + ' de ' + p.validos.length, 'info');
+    }
+    out.innerHTML = msg('Importação concluída: ' + p.validos.length + ' clientes.', 'ok');
+    var n = await S.sb.from('clientes').select('id', { count: 'exact', head: true });
+    if (!n.error) $('#contagem').innerHTML = msg('Clientes na base: ' + (n.count || 0), 'info');
+  } catch (e){ out.innerHTML = msg('Falha na importação: ' + traduzErro(e), 'err'); }
+  btn.disabled = false;
+}
+function adminConfig(){
+  var c = S.cfg;
+  $('#admin-corpo').innerHTML = '<section class="card stack"><h2>Configurações do documento</h2>' +
+    '<div class="row"><div class="grow"><label for="c-emp">Empreendimento</label><input id="c-emp" type="text" value="' + esc(c.empreendimento) + '"></div>' +
+    '<div class="grow"><label for="c-empresa">Empresa</label><input id="c-empresa" type="text" value="' + esc(c.empresa) + '"></div></div>' +
+    '<div class="row"><div class="grow"><label for="c-valor">Valor padrão do Cheque Bônus (R$), se a base não trouxer</label><input id="c-valor" type="text" inputmode="decimal" value="' + esc(valorInput(c.valor_padrao)) + '"></div>' +
+    '<div class="grow"><label for="c-resp">Responsável pela entrega (opcional)</label><input id="c-resp" type="text" value="' + esc(c.responsavel) + '"></div></div>' +
+    '<div><label for="c-texto">Texto complementar no documento (opcional)</label><textarea id="c-texto">' + esc(c.texto_complementar) + '</textarea></div>' +
+    '<div id="cfg-msg"></div><button class="btn" id="cfg-salvar">Salvar configurações</button></section>';
+  $('#cfg-salvar').addEventListener('click', async function(){
+    var v = { empreendimento: $('#c-emp').value.trim() || 'EPLENUM RESERVE', empresa: $('#c-empresa').value.trim() || 'Emais Urbanismo',
+      valor_padrao: parseValor($('#c-valor').value), responsavel: $('#c-resp').value.trim(), texto_complementar: $('#c-texto').value.trim() };
+    var r = await S.sb.from('configuracoes').upsert({ chave: 'documento', valor: v, atualizado_em: new Date().toISOString() });
+    if (r.error){ $('#cfg-msg').innerHTML = msg('Não foi possível salvar: ' + traduzErro(r.error), 'err'); return; }
+    S.cfg = Object.assign(S.cfg, v); toast('Configurações salvas');
+    $('#cfg-msg').innerHTML = msg('Configurações salvas.', 'ok');
+  });
+}
+async function adminUsuarios(){
+  $('#admin-corpo').innerHTML = '<section class="card stack"><h2>Novo usuário</h2>' +
+    '<div class="row"><div class="grow"><label for="u-email">E-mail</label><input id="u-email" type="email" autocomplete="off"></div>' +
+    '<div class="grow"><label for="u-senha">Senha (mínimo 8 caracteres)</label><input id="u-senha" type="text" autocomplete="off" spellcheck="false"></div>' +
+    '<button class="btn sec" id="u-gerar" type="button">Gerar senha</button><button class="btn" id="u-criar" type="button">Criar usuário</button></div>' +
+    '<div id="u-msg"></div><p class="muted" style="margin:0">Todo usuário criado aqui entra como operador: busca clientes e gera documentos, sem acesso à administração. Anote a senha e passe para a pessoa, ela não volta a aparecer.</p></section>' +
+    '<section class="card stack"><h2>Usuários cadastrados</h2><div id="usr">' + msg('Carregando...', 'info') + '</div></section>';
+  $('#u-gerar').addEventListener('click', function(){ $('#u-senha').value = gerarSenha(); });
+  $('#u-criar').addEventListener('click', async function(){
+    var btn = this, out = $('#u-msg'), email = $('#u-email').value.trim(), senha = $('#u-senha').value;
+    if (!email || senha.length < 8){ out.innerHTML = msg('Informe o e-mail e uma senha com pelo menos 8 caracteres.', 'warn'); return; }
+    btn.disabled = true; out.innerHTML = msg('Criando...', 'info');
+    try {
+      await chamarUsuarios({ acao: 'criar', email: email, senha: senha });
+      out.innerHTML = msg('Usuário criado: ' + email + '. Passe a senha para a pessoa.', 'ok');
+      $('#u-email').value = ''; $('#u-senha').value = '';
+      await carregarUsuarios();
+    } catch (e){ out.innerHTML = msg(traduzErro(e), 'err'); }
+    btn.disabled = false;
+  });
+  carregarUsuarios();
+}
+async function carregarUsuarios(){
+  var r = await S.sb.from('perfis').select('id,email,papel,criado_em').order('criado_em');
+  var box = $('#usr'); if (!box) return;
+  if (r.error){ box.innerHTML = msg('Erro: ' + traduzErro(r.error), 'err'); return; }
+  box.innerHTML = '<div class="lista">' + (r.data || []).map(function(u){
+    return '<div class="item"><div class="info"><b>' + esc(u.email) + '</b><span>Criado em ' + esc(new Date(u.criado_em).toLocaleDateString('pt-BR')) + '</span></div>' +
+      '<span class="tag">' + (u.papel === 'admin' ? 'Administrador' : 'Operador') + '</span>' +
+      '<button class="btn sec sm" data-troca="' + esc(u.id) + '">Trocar senha</button>' +
+      '<div class="row troca" style="display:none;width:100%"><div class="grow"><label>Nova senha (mínimo 8 caracteres)</label><input type="text" class="nova-senha" autocomplete="off" spellcheck="false"></div>' +
+      '<button class="btn sec sm" data-gera="1" type="button">Gerar senha</button><button class="btn sm" data-salva="' + esc(u.id) + '" type="button">Salvar senha</button><div class="troca-msg" style="width:100%"></div></div></div>';
+  }).join('') + '</div>';
+  box.querySelectorAll('[data-troca]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var linha = b.closest('.item').querySelector('.troca');
+      linha.style.display = linha.style.display === 'none' ? 'flex' : 'none';
+    });
+  });
+  box.querySelectorAll('[data-gera]').forEach(function(b){
+    b.addEventListener('click', function(){ b.closest('.troca').querySelector('.nova-senha').value = gerarSenha(); });
+  });
+  box.querySelectorAll('[data-salva]').forEach(function(b){
+    b.addEventListener('click', async function(){
+      var linha = b.closest('.troca'), senha = linha.querySelector('.nova-senha').value, out = linha.querySelector('.troca-msg');
+      if (senha.length < 8){ out.innerHTML = msg('A senha precisa ter pelo menos 8 caracteres.', 'warn'); return; }
+      b.disabled = true; out.innerHTML = msg('Salvando...', 'info');
+      try {
+        await chamarUsuarios({ acao: 'trocar_senha', id: b.getAttribute('data-salva'), senha: senha });
+        out.innerHTML = msg('Senha trocada. Passe a nova senha para a pessoa.', 'ok');
+        linha.querySelector('.nova-senha').value = '';
+      } catch (e){ out.innerHTML = msg(traduzErro(e), 'err'); }
+      b.disabled = false;
+    });
+  });
+}
+
+/* ---------------- início ---------------- */
+async function init(){
+  if (!configurado()){ renderSetup(); return; }
+  if (!window.supabase){ app.innerHTML = '<div class="wrap"><div class="card login">' + msg('Não foi possível carregar o Supabase. Verifique a internet e recarregue.', 'err') + '</div></div>'; return; }
+  S.sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+  S.sb.auth.onAuthStateChange(function(ev){
+    if (ev === 'SIGNED_OUT'){ S.user = null; S.cliente = null; S.ultimo = null; S.papel = 'operador'; renderLogin(); }
+  });
+  var s = await S.sb.auth.getSession();
+  if (s.data && s.data.session) await entrar(s.data.session.user); else renderLogin();
+}
+init();
+})();
+</script>
+</body>
+</html>
