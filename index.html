@@ -963,7 +963,7 @@ function desenharVans(){
       (fechada ? '' : '<div class="lista">' + lista.map(function(r){
         var a = Number(r.acompanhantes) || 0;
         return '<div class="item"><div class="info"><b>' + esc(titulo(r.nome)) + '</b><span>' + (a ? '+' + a + (a === 1 ? ' acompanhante' : ' acompanhantes') : 'sem acompanhantes') + ' | ' + (1 + a) + (a ? ' pessoas' : ' pessoa') + ' | check-in ' + esc(fmtHora(r.embarque_em)) + '</span></div>' +
-          (r.manual ? '<span class="tag manual">Cadastro manual</span>' : '') + (r.doc_gerado ? '<span class="tag etapa-van">Documento gerado</span>' : '') + '</div>';
+          (r.manual ? '<span class="tag manual">Cadastro manual</span>' : '') + (r.doc_gerado ? '<span class="tag etapa-van">Documento gerado</span>' : '') + '<div class="acoes"><button class="btn sec sm" type="button" data-van-edit="' + esc(r.cliente_id) + '">Editar pessoas</button></div></div>';
       }).join('') + '</div>') + '</section>';
   }
   $('#vn-cont').innerHTML = '<div class="cont"><b>' + emUso + '</b><span>Vans em uso</span></div><div class="cont"><b>' + lotadas + '</b><span>Vans lotadas</span></div><div class="cont"><b>' + pessoas + '</b><span>Pessoas nas vans</span></div>';
@@ -971,6 +971,54 @@ function desenharVans(){
   document.querySelectorAll('[data-van-toggle]').forEach(function(b){
     b.addEventListener('click', function(){ var n = b.getAttribute('data-van-toggle'); S.vanFechada[n] = !S.vanFechada[n]; desenharVans(); });
   });
+  document.querySelectorAll('[data-van-edit]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var id = b.getAttribute('data-van-edit');
+      var x = (S.vans || []).filter(function(y){ return String(y.cliente_id) === String(id); })[0];
+      if (x) editarPessoas(x);
+    });
+  });
+}
+/* editar a quantidade de acompanhantes depois do check-in */
+function editarPessoas(x){
+  var cap = capVan(), acomp = Number(x.acompanhantes) || 0, van = x.van;
+  var fundo = document.createElement('div'); fundo.className = 'modal-fundo';
+  fundo.innerHTML = '<div class="modal card stack" role="dialog" aria-modal="true"><h2>Editar pessoas de ' + esc(titulo(x.nome)) + '</h2>' +
+    '<p class="muted" style="margin:0">Hoje na <b>Van ' + van + '</b>.</p>' +
+    '<div><label>Quantos acompanhantes vão com o cliente?</label>' +
+    '<div class="stepper"><button class="btn sec" id="e-menos" type="button" aria-label="Menos um">-</button><output id="e-val">0</output><button class="btn sec" id="e-mais" type="button" aria-label="Mais um">+</button></div>' +
+    '<p class="muted" id="e-total" style="margin:6px 0 0"></p></div><div id="e-aviso"></div>' +
+    '<div id="mdl-msg"></div><div class="row"><button class="btn" id="e-ok" type="button">Salvar</button><button class="btn sec" id="e-cancel" type="button">Cancelar</button></div></div>';
+  document.body.appendChild(fundo);
+  function fechar(){ fundo.remove(); }
+  function destino(){
+    var occ = ocupacaoVans(S.vans, x.cliente_id), seats = 1 + acomp, d = van;
+    while ((occ[d] || 0) + seats > cap) d++;
+    return d;
+  }
+  function pintar(){
+    var seats = 1 + acomp, d = destino();
+    $('#e-val').textContent = acomp;
+    $('#e-total').textContent = 'Total: ' + seats + (seats === 1 ? ' pessoa (só o cliente)' : ' pessoas (cliente + ' + acomp + ')') + '. Cada van leva ' + cap + '.';
+    $('#e-menos').disabled = acomp <= 0; $('#e-mais').disabled = acomp >= cap - 1;
+    $('#e-aviso').innerHTML = d !== van ? msg('Não cabe na Van ' + van + '. O grupo será levado para a Van ' + d + '.', 'warn') : '';
+  }
+  $('#e-menos').addEventListener('click', function(){ if (acomp > 0){ acomp--; pintar(); } });
+  $('#e-mais').addEventListener('click', function(){ if (acomp < cap - 1){ acomp++; pintar(); } });
+  $('#e-cancel').addEventListener('click', fechar);
+  $('#e-ok').addEventListener('click', async function(){
+    var b = $('#e-ok'); b.disabled = true; $('#mdl-msg').innerHTML = msg('Salvando...', 'info');
+    var r = await S.sb.rpc('ajustar_acompanhantes', { p_cliente_id: Number(x.cliente_id), p_acompanhantes: acomp });
+    if (r.error){
+      $('#mdl-msg').innerHTML = msg(traduzErro(r.error), 'err');
+      await carregarVans(); pintar(); b.disabled = false; return;
+    }
+    var o = Array.isArray(r.data) ? r.data[0] : r.data;
+    fechar();
+    toast(o && o.mudou_de_van ? 'Atualizado. Grupo levado para a Van ' + o.van : 'Atualizado na Van ' + (o ? o.van : van));
+    atualizarVans();
+  });
+  pintar();
 }
 
 /* ---------------- administração ---------------- */
@@ -1244,5 +1292,4 @@ init();
 </script>
 </body>
 </html>
-
-<!-- build 2026-11-04 16:50 -->
+<!-- build 1793825374 -->
