@@ -462,11 +462,17 @@ function render(){
 }
 
 /* ---------------- atendimento: fila de check-ins e busca ---------------- */
-function infoPessoa(x){
+function campoBase(x, chave){
+  var d = x.dados || {}, ruins = /telefone|fone|celular|email|e-mail|cpf|creci|imobiliaria|data|valor/;
+  var ks = Object.keys(d).filter(function(k){ var n = norm(k); return n.indexOf(chave) >= 0 && !ruins.test(n) && String(d[k]).trim(); });
+  if (!ks.length) ks = Object.keys(d).filter(function(k){ return norm(k).indexOf(chave) >= 0 && String(d[k]).trim(); });
+  return ks.length ? String(d[ks[0]]).trim() : '';
+}
+function infoPessoa(x, semCorretor){
   var p = [], c = x.cpf != null && x.cpf !== '' ? fmtCPF(x.cpf) : (x.cpf_mask || '');
   p.push(c ? 'CPF ' + c : 'sem CPF');
   if (x.telefone) p.push(x.telefone);
-  if (x.corretor) p.push('Corretor: ' + x.corretor);
+  if (x.corretor && !semCorretor) p.push('Corretor: ' + x.corretor);
   if (x.embarque_em) p.push('check-in ' + fmtHora(x.embarque_em));
   if (x.sem_tour) p.push('Não vai participar do tour');
   else if (x.van) p.push('Van ' + x.van + (x.acompanhantes ? ' (+' + x.acompanhantes + ' acomp.)' : ''));
@@ -477,8 +483,10 @@ function linhaAt(x){
   if (x.manual) tags += '<span class="tag manual">Cadastro manual</span>';
   if (x.doc_em) tags += '<span class="tag etapa-van">Documento gerado ' + fmtHora(x.doc_em) + '</span>';
   else if (sem) tags += '<span class="tag">Sem check-in</span>';
-  return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x)) + '</span></div>' +
-    '<div class="acoes">' + tags + '<button class="btn" data-gerar="' + esc(x.id) + '"' + (bloq ? ' disabled title="Aguardando check-in na recepção"' : '') + '>' + (x.doc_em ? 'Gerar novamente' : 'GERAR DOCUMENTO') + '</button></div></div>';
+  var corr = campoBase(x, 'corretor') || (x.corretor ? String(x.corretor).trim() : ''), prosp = campoBase(x, 'prospecto');
+  return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x, true)) + '</span>' +
+    '<span style="display:block;margin-top:2px"><b style="display:inline">NOME DO CORRETOR:</b> ' + (corr ? esc(corr) : '-') + '</span><span style="display:block"><b style="display:inline">NÚMERO DO PROSPECTO:</b> ' + (prosp ? esc(prosp) : '-') + '</span></div>' +
+    '<div class="acoes">' + tags + '<button class="btn" data-gerar=""' + esc(x.id) + '"' + (bloq ? ' disabled title="Aguardando check-in na recepção"' : '') + '>' + (x.doc_em ? 'Gerar novamente' : 'GERAR DOCUMENTO') + '</button></div></div>';
 }
 function abrirManual(boxSel, nomeInicial, aoCriar){
   var box = $(boxSel);
@@ -1320,4 +1328,4 @@ init();
 </script>
 </body>
 </html>
-<!-- build 1793979116 -->
+<!-- build 1793981130 -->
