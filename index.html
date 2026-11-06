@@ -284,7 +284,7 @@ var S = {
   cfg: { empreendimento: '', empresa: 'Emais Urbanismo', valor_padrao: null, texto_complementar: '', responsavel: '' },
   chk: { exigir: false, local: '', capacidade: 13 },
   ck: { lista: [], resultados: null, termo: '', filtro: 'todos' },
-  at: { fila: [], res: null, termo: '', mapa: {} }, rel: [],
+  at: { fila: [], res: null, termo: '', mapa: {} }, atFechada: {}, docsAba: 'tour', rel: [],
   view: 'busca', cliente: null, ultimo: null, pad: null, adminTab: 'base', imp: null
 };
 var timerCk = null, seqCk = 0, seqAt = 0;
@@ -468,7 +468,8 @@ function infoPessoa(x){
   if (x.telefone) p.push(x.telefone);
   if (x.corretor) p.push('Corretor: ' + x.corretor);
   if (x.embarque_em) p.push('check-in ' + fmtHora(x.embarque_em));
-  if (x.van) p.push('Van ' + x.van + (x.acompanhantes ? ' (+' + x.acompanhantes + ' acomp.)' : ''));
+  if (x.sem_tour) p.push('Não vai participar do tour');
+  else if (x.van) p.push('Van ' + x.van + (x.acompanhantes ? ' (+' + x.acompanhantes + ' acomp.)' : ''));
   return p.join(' | ');
 }
 function linhaAt(x){
@@ -545,7 +546,27 @@ function desenharAt(){
   S.at.fila.forEach(function(x){ S.at.mapa[x.id] = x; });
   (S.at.res || []).forEach(function(x){ S.at.mapa[x.id] = x; });
   $('#at-titulo').textContent = 'Aguardando documento (' + S.at.fila.length + ')';
-  $('#at-fila').innerHTML = S.at.fila.length ? '<div class="lista">' + S.at.fila.map(linhaAt).join('') + '</div>' : msg('Nenhum cliente com check-in aguardando documento no momento.', 'info');
+  var grupos = {}, chaves = [];
+  S.at.fila.forEach(function(x){
+    var k = x.sem_tour ? 'sem' : (x.van ? String(x.van) : 'novan');
+    if (!grupos[k]){ grupos[k] = []; chaves.push(k); }
+    grupos[k].push(x);
+  });
+  chaves.sort(function(a, b){
+    function pes(k){ return k === 'sem' ? 100000 : (k === 'novan' ? 99999 : Number(k)); }
+    return pes(a) - pes(b);
+  });
+  $('#at-fila').innerHTML = chaves.length ? chaves.map(function(k){
+    var l = grupos[k], fechada = !!S.atFechada[k];
+    var nome = k === 'sem' ? 'Não vai participar do tour' : (k === 'novan' ? 'Sem van definida' : 'Van ' + k);
+    return '<section class="card stack" style="background:var(--soft)"><div class="row" style="justify-content:space-between;align-items:center">' +
+      '<button type="button" class="van-toggle" data-at-toggle="' + esc(k) + '" aria-expanded="' + (!fechada) + '" aria-label="' + (fechada ? 'Maximizar ' : 'Minimizar ') + esc(nome) + '"><span class="seta">' + (fechada ? '+' : '-') + '</span><h3 style="margin:0">' + esc(nome) + '</h3></button>' +
+      '<span class="tag etapa-chegou">' + l.length + (l.length === 1 ? ' aguardando' : ' aguardando') + '</span></div>' +
+      (fechada ? '' : '<div class="lista">' + l.map(linhaAt).join('') + '</div>') + '</section>';
+  }).join('') : msg('Nenhum cliente com check-in aguardando documento no momento.', 'info');
+  document.querySelectorAll('[data-at-toggle]').forEach(function(b){
+    b.addEventListener('click', function(){ var k = b.getAttribute('data-at-toggle'); S.atFechada[k] = !S.atFechada[k]; desenharAt(); });
+  });
   var r = S.at.res;
   $('#at-res').innerHTML = r === null ? '' : (r.length ? '<div class="lista">' + r.map(linhaAt).join('') + '</div>' : msg('Ninguém encontrado com esse nome ou CPF. Se o cliente não está na planilha, use o Cadastro manual.', 'warn'));
   document.querySelectorAll('[data-gerar]').forEach(function(b){
@@ -695,7 +716,7 @@ async function salvar(){
     if (up2.error) throw up2.error;
     var ins = await S.sb.from('documentos_bonus').insert({
       id: id, cliente_id: c.id, cpf: c.cpf, nome: f.nome, valor_bonus: f.valor,
-      empreendimento: f.emp, data_retirada: f.dataISO,
+      empreendimento: f.emp, data_retirada: f.dataISO, sem_tour: !!c.sem_tour,
       assinatura_path: base + '-assinatura.png', pdf_path: base + '.pdf'
     });
     if (ins.error) throw ins.error;
@@ -726,9 +747,9 @@ function baixarBlob(blob, nome){
 async function renderDocs(){
   app.innerHTML = shell('<section class="card stack"><div class="row" style="align-items:center;justify-content:space-between"><h2>Documentos gerados</h2>' +
     '<div class="grow" style="max-width:340px"><label for="filtro">Filtrar por nome ou CPF</label><input id="filtro" type="text" autocomplete="off"></div></div>' +
-    '<div id="lista" class="lista">' + msg('Carregando...', 'info') + '</div></section>');
+    '<div class="subtabs" id="docs-abas"></div><div id="lista" class="lista">' + msg('Carregando...', 'info') + '</div></section>');
   ligarShell();
-  var r = await S.sb.from('documentos_bonus').select('id,numero,cpf,nome,valor_bonus,data_retirada,criado_em,criado_por,pdf_path').order('criado_em', { ascending: false }).limit(300);
+  var r = await S.sb.from('documentos_bonus').select('id,numero,cpf,nome,valor_bonus,data_retirada,criado_em,criado_por,pdf_path,sem_tour').order('criado_em', { ascending: false }).limit(300);
   var lista = $('#lista');
   if (r.error){ lista.innerHTML = msg('Erro ao carregar: ' + traduzErro(r.error), 'err'); return; }
   var docs = r.data || [], emails = {};
@@ -738,8 +759,13 @@ async function renderDocs(){
   }
   function desenhar(){
     var q = norm($('#filtro').value), d = onlyDigits($('#filtro').value);
-    var vis = docs.filter(function(x){ return !q || norm(x.nome).indexOf(q) >= 0 || (d && x.cpf && x.cpf.indexOf(d) >= 0); });
-    if (!vis.length){ lista.innerHTML = msg(docs.length ? 'Nenhum documento com esse filtro.' : 'Nenhum documento gerado ainda.', 'info'); return; }
+    var nTour = docs.filter(function(x){ return !x.sem_tour; }).length, nSem = docs.length - nTour, aba = S.docsAba === 'sem' ? 'sem' : 'tour';
+    $('#docs-abas').innerHTML = '<button type="button" data-aba="tour"' + (aba === 'tour' ? ' aria-current="page"' : '') + '>Com tour (' + nTour + ')</button>' +
+      '<button type="button" data-aba="sem"' + (aba === 'sem' ? ' aria-current="page"' : '') + '>Não vai ao tour (' + nSem + ')</button>';
+    $('#docs-abas').querySelectorAll('[data-aba]').forEach(function(b){ b.addEventListener('click', function(){ S.docsAba = b.getAttribute('data-aba'); desenhar(); }); });
+    var base = docs.filter(function(x){ return aba === 'sem' ? !!x.sem_tour : !x.sem_tour; });
+    var vis = base.filter(function(x){ return !q || norm(x.nome).indexOf(q) >= 0 || (d && x.cpf && x.cpf.indexOf(d) >= 0); });
+    if (!vis.length){ lista.innerHTML = msg(base.length ? 'Nenhum documento com esse filtro.' : (aba === 'sem' ? 'Nenhum documento de cliente que não vai ao tour.' : 'Nenhum documento gerado ainda.'), 'info'); return; }
     lista.innerHTML = vis.map(function(x){
       return '<div class="item"><div class="info"><b>' + esc(x.nome) + '</b><span>' + (x.cpf ? 'CPF ' + esc(maskCPFLista(x.cpf)) : 'sem CPF') +
         (x.valor_bonus != null ? ' | ' + esc(brl(Number(x.valor_bonus))) : '') +
@@ -789,18 +815,19 @@ function linhaCk(x){
   else if (e === 'aguarda') acoes = '<button class="btn sec sm" data-ck="editar"' + id + '>Alterar van</button><button class="btn sec sm" data-ck="desfazer_embarque"' + id + '>Desfazer check-in</button>';
   return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x)) + '</span></div>' +
     (x.manual ? '<span class="tag manual">Cadastro manual</span>' : '') +
-    '<span class="tag ' + CLASSE_CK[e] + '">' + ROTULO_CK[e] + '</span><div class="acoes">' + acoes + '</div></div>';
+    (x.sem_tour ? '<span class="tag">Sem tour</span>' : '') + '<span class="tag ' + CLASSE_CK[e] + '">' + ROTULO_CK[e] + '</span><div class="acoes">' + acoes + '</div></div>';
 }
 /* janela do check-in: acompanhantes e van */
 async function abrirEmbarque(x, aoFim){
-  var cap = capVan(), acomp = Number(x.acompanhantes) || 0, vanSel = x.van || null;
+  var cap = capVan(), acomp = Number(x.acompanhantes) || 0, vanSel = x.van || null, semTour = !!x.sem_tour;
   await carregarVans();
   var fundo = document.createElement('div'); fundo.className = 'modal-fundo';
   fundo.innerHTML = '<div class="modal card stack" role="dialog" aria-modal="true"><h2>Check-in de ' + esc(x.nome) + '</h2>' +
-    '<div><label>Quantos acompanhantes vão com o cliente no tour?</label>' +
+    '<div id="a-box"><label>Quantos acompanhantes vão com o cliente no tour?</label>' +
     '<div class="stepper"><button class="btn sec" id="a-menos" type="button" aria-label="Menos um">-</button><output id="a-val">0</output><button class="btn sec" id="a-mais" type="button" aria-label="Mais um">+</button></div>' +
     '<p class="muted" id="a-total" style="margin:6px 0 0"></p></div>' +
-    '<div><label>Van</label><div class="van-grid" id="van-grid"></div></div>' +
+    '<div><label>Van</label><div class="van-grid" id="van-grid"></div>' +
+    '<div style="margin-top:10px"><button class="van-btn" type="button" id="sem-tour" style="width:100%;min-height:64px"><b>NÃO VAI PARTICIPAR DO TOUR</b><span>Gera o documento e retira o cheque, mas não ocupa lugar em nenhuma van.</span></button></div></div>' +
     '<div id="mdl-msg"></div><div class="row"><button class="btn" id="mdl-ok" type="button">Confirmar check-in</button><button class="btn sec" id="mdl-cancel" type="button">Cancelar</button></div></div>';
   document.body.appendChild(fundo);
   function fechar(){ fundo.remove(); }
@@ -817,28 +844,33 @@ async function abrirEmbarque(x, aoFim){
     }
     var atual = lista.filter(function(l){ return l.v === vanSel; })[0];
     if (!atual || !atual.ok) vanSel = primeiro;
+    $('#a-box').style.display = semTour ? 'none' : '';
+    $('#sem-tour').setAttribute('aria-pressed', String(semTour));
+    $('#mdl-ok').textContent = semTour ? 'Confirmar check-in (sem tour)' : 'Confirmar check-in';
     $('#a-val').textContent = acomp;
     $('#a-total').textContent = 'Total na van: ' + seats + (seats === 1 ? ' pessoa (só o cliente)' : ' pessoas (cliente + ' + acomp + ')') + '. Cada van leva ' + cap + '.';
     $('#a-menos').disabled = acomp <= 0; $('#a-mais').disabled = acomp >= cap - 1;
     $('#van-grid').innerHTML = lista.map(function(l){
-      return '<button class="van-btn" type="button" data-van="' + l.v + '"' + (l.ok ? '' : ' disabled') + ' aria-pressed="' + (l.v === vanSel) + '"><b>Van ' + l.v + '</b><span>' + l.usados + ' de ' + cap + ' lugares</span><span>' + esc(l.nota) + '</span></button>';
+      return '<button class="van-btn" type="button" data-van="' + l.v + '"' + (l.ok ? '' : ' disabled') + ' aria-pressed="' + (!semTour && l.v === vanSel) + '"><b>Van ' + l.v + '</b><span>' + l.usados + ' de ' + cap + ' lugares</span><span>' + esc(l.nota) + '</span></button>';
     }).join('');
     $('#van-grid').querySelectorAll('[data-van]').forEach(function(b){
-      b.addEventListener('click', function(){ vanSel = Number(b.getAttribute('data-van')); pintar(); });
+      b.addEventListener('click', function(){ vanSel = Number(b.getAttribute('data-van')); semTour = false; pintar(); });
     });
-    $('#mdl-ok').disabled = vanSel == null;
+    $('#mdl-ok').disabled = !semTour && vanSel == null;
   }
   $('#a-menos').addEventListener('click', function(){ if (acomp > 0){ acomp--; pintar(); } });
   $('#a-mais').addEventListener('click', function(){ if (acomp < cap - 1){ acomp++; pintar(); } });
+  $('#sem-tour').addEventListener('click', function(){ semTour = !semTour; pintar(); });
   $('#mdl-cancel').addEventListener('click', fechar);
   $('#mdl-ok').addEventListener('click', async function(){
     var b = $('#mdl-ok'); b.disabled = true; $('#mdl-msg').innerHTML = msg('Registrando...', 'info');
-    var r = await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(x.cliente_id), p_etapa: 'embarque', p_van: vanSel, p_acompanhantes: acomp });
+    var r = semTour ? await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(x.cliente_id), p_etapa: 'sem_tour', p_van: null, p_acompanhantes: 0 })
+      : await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(x.cliente_id), p_etapa: 'embarque', p_van: vanSel, p_acompanhantes: acomp });
     if (r.error){
       $('#mdl-msg').innerHTML = msg(traduzErro(r.error), 'err');
       await carregarVans(); pintar(); return;
     }
-    fechar(); toast('Check-in registrado na Van ' + vanSel);
+    fechar(); toast(semTour ? 'Check-in registrado: não vai participar do tour' : 'Check-in registrado na Van ' + vanSel);
     if (aoFim) aoFim();
   });
   pintar();
@@ -887,12 +919,14 @@ async function atualizarCk(){
 function desenharCk(){
   if (!$('#ck-lista')) return;
   var l = S.ck.lista, n = { aguarda: 0, doc: 0 }, pessoas = 0;
-  l.forEach(function(x){ var e = etapaCk(x); if (n[e] != null) n[e]++; pessoas += 1 + (Number(x.acompanhantes) || 0); });
+  var semTour = 0;
+  l.forEach(function(x){ var e = etapaCk(x); if (n[e] != null) n[e]++; if (x.sem_tour) semTour++; else pessoas += 1 + (Number(x.acompanhantes) || 0); });
   $('#ck-cont').innerHTML =
     '<div class="cont"><b>' + l.length + '</b><span>Check-ins feitos</span></div>' +
     '<div class="cont"><b>' + pessoas + '</b><span>Pessoas no tour</span></div>' +
     '<div class="cont"><b>' + n.aguarda + '</b><span>Aguardando documento</span></div>' +
-    '<div class="cont"><b>' + n.doc + '</b><span>Documento gerado</span></div>';
+    '<div class="cont"><b>' + n.doc + '</b><span>Documento gerado</span></div>' +
+    '<div class="cont"><b>' + semTour + '</b><span>Não vão ao tour</span></div>';
   var filtros = [['todos', 'Todos'], ['aguarda', 'Aguardando documento'], ['doc', 'Documento gerado']];
   $('#ck-filtros').innerHTML = filtros.map(function(f){
     return '<button type="button" data-filtro="' + f[0] + '"' + (S.ck.filtro === f[0] ? ' aria-current="page"' : '') + '>' + f[1] + '</button>';
@@ -912,7 +946,7 @@ async function acaoCk(id, etapa){
   if (etapa === 'abrir' || etapa === 'editar'){
     var x = S.ck.lista.concat(S.ck.resultados || []).filter(function(y){ return String(y.cliente_id) === String(id); })[0];
     if (!x) return;
-    return abrirEmbarque({ cliente_id: x.cliente_id, nome: titulo(x.nome), van: x.van, acompanhantes: x.acompanhantes }, atualizarCk);
+    return abrirEmbarque({ cliente_id: x.cliente_id, nome: titulo(x.nome), van: x.van, acompanhantes: x.acompanhantes, sem_tour: x.sem_tour }, atualizarCk);
   }
   document.querySelectorAll('[data-ck]').forEach(function(b){ b.disabled = true; });
   var r = await S.sb.rpc('registrar_checkin', { p_cliente_id: Number(id), p_etapa: etapa, p_van: null, p_acompanhantes: 0 });
@@ -1184,7 +1218,7 @@ async function adminRelatorio(){
     $('#rel-corpo').innerHTML = '<div class="rolagem"><table class="tabela"><thead><tr><th>Cliente</th><th>CPF</th><th>Telefone</th><th>Corretor</th><th>Origem</th><th>Van</th><th>Acomp.</th><th>Check-in</th><th>Documento assinado</th><th>Tempo</th><th>Situação</th><th>Protocolo</th></tr></thead><tbody>' +
       v.map(function(x){
         return '<tr><td>' + esc(titulo(x.nome)) + '</td><td>' + esc(x.cpf ? fmtCPF(x.cpf) : 'sem CPF') + '</td><td>' + esc(x.telefone || '') + '</td><td>' + esc(x.corretor || '') + '</td><td>' + (x.manual ? 'Manual' : 'Planilha') +
-          '</td><td>' + esc(x.van ? 'Van ' + x.van : '') + '</td><td>' + esc(x.van ? x.acompanhantes : '') + '</td><td>' + esc(fmtDH(x.checkin_em)) + '</td><td>' + esc(fmtDH(x.doc_em)) + '</td><td>' + esc(tempoEntre(x.checkin_em, x.doc_em)) + '</td><td>' + esc(situacaoRel(x)) + '</td><td>' + esc(x.protocolo || '') + '</td></tr>';
+          '</td><td>' + esc(x.sem_tour ? 'Sem tour' : (x.van ? 'Van ' + x.van : '')) + '</td><td>' + esc(x.van ? x.acompanhantes : '') + '</td><td>' + esc(fmtDH(x.checkin_em)) + '</td><td>' + esc(fmtDH(x.doc_em)) + '</td><td>' + esc(tempoEntre(x.checkin_em, x.doc_em)) + '</td><td>' + esc(situacaoRel(x)) + '</td><td>' + esc(x.protocolo || '') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
   $('#rel-atualizar').addEventListener('click', carregar);
@@ -1195,7 +1229,7 @@ async function adminRelatorio(){
     if (!v.length){ toast('Nada para exportar'); return; }
     var linhas = v.map(function(x){
       return { 'Cliente': titulo(x.nome), 'CPF': x.cpf ? fmtCPF(x.cpf) : 'sem CPF', 'Telefone': x.telefone || '', 'Corretor': x.corretor || '',
-        'Origem': x.manual ? 'Inserção manual' : 'Planilha', 'Van': x.van ? 'Van ' + x.van : '', 'Acompanhantes': x.van ? x.acompanhantes : '', 'Check-in (data e hora)': fmtDH(x.checkin_em), 'Check-in feito por': x.checkin_por || '',
+        'Origem': x.manual ? 'Inserção manual' : 'Planilha', 'Van': x.sem_tour ? 'Não vai participar do tour' : (x.van ? 'Van ' + x.van : ''), 'Acompanhantes': x.van ? x.acompanhantes : '', 'Check-in (data e hora)': fmtDH(x.checkin_em), 'Check-in feito por': x.checkin_por || '',
         'Documento assinado (data e hora)': fmtDH(x.doc_em), 'Documento gerado por': x.doc_por || '', 'Tempo entre check-in e assinatura': tempoEntre(x.checkin_em, x.doc_em),
         'Situação': situacaoRel(x), 'Protocolo': x.protocolo || '', 'Valor do bônus': x.valor_bonus != null ? Number(x.valor_bonus) : '' };
     });
@@ -1286,4 +1320,4 @@ init();
 </script>
 </body>
 </html>
-<!-- build 1793969756 -->
+<!-- build 1793979116 -->
