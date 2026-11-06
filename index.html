@@ -561,10 +561,8 @@ function paragrafos(v){
   var emp = v.emp || '', empresa = S.cfg.empresa || 'Emais Urbanismo';
   var vv = v.valor ? ' no valor de ' + brl(v.valor) + ' (' + valorExtenso(v.valor) + ')' : '';
   var p = [];
-  p.push('A ' + empresa + ' parabeniza ' + v.nome + (v.cpf ? ', portador(a) do CPF nº ' + fmtCPF(v.cpf) : '') + ', pela conquista do Cheque Bônus' + vv + '.');
-  p.push('O Cheque Bônus está sendo retirado nesta data, ' + dataLonga(v.data) + ', e poderá ser utilizado no lançamento do empreendimento ' + emp + '.');
+  p.push('Eu, ' + v.nome + (v.cpf ? ', portador(a) do CPF nº ' + fmtCPF(v.cpf) : '') + ', confirmo que retirei o Cheque Bônus do empreendimento ' + emp + vv + ', na data de ' + dataLonga(v.data) + '.');
   if (S.cfg.texto_complementar && String(S.cfg.texto_complementar).trim()) p.push(String(S.cfg.texto_complementar).trim());
-  p.push('Ao assinar abaixo, o(a) cliente confirma a retirada do Cheque Bônus na data indicada.');
   return p;
 }
 function lerFormDoc(){
@@ -574,11 +572,9 @@ function lerFormDoc(){
 }
 function atualizarPapel(){
   var v = lerFormDoc(), emp = v.emp || 'EMPREENDIMENTO';
-  var primeiro = v.nome.split(' ')[0] || '';
   $('#papel').innerHTML = '<div class="faixa">' + mosaico(40, 34) + '</div><div class="corpo">' +
-    '<div class="emp">' + esc(S.cfg.empresa || 'Emais Urbanismo') + '</div><h3>Parabenização</h3>' +
+    '<div class="emp">' + esc(S.cfg.empresa || 'Emais Urbanismo') + '</div><h3>Confirmação de retirada</h3>' +
     '<div class="sub">Cheque Bônus ' + esc(emp) + '</div><hr>' +
-    '<div class="saud">Parabéns, ' + esc(primeiro) + '!</div>' +
     paragrafos(v).map(function(t){ return '<p>' + esc(t) + '</p>'; }).join('') +
     '<div class="rodape">Assinatura do(a) cliente abaixo da confirmação, na tela do tablet.</div></div>';
 }
@@ -659,19 +655,17 @@ function gerarPDF(d){
     if (i % 2 === 0) doc.triangle(x0, h, x0 + b, h, x0 + b / 2, 0, 'F'); else doc.triangle(x0, 0, x0 + b, 0, x0 + b / 2, h, 'F');
   }
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(30,117,106); doc.text(empresa.toUpperCase(), M, 34, { charSpace: 0.6 });
-  doc.setFontSize(26); doc.setTextColor(19,12,14); doc.text('Parabenização', M, 47);
+  doc.setFontSize(26); doc.setTextColor(19,12,14); doc.text('Confirmação de retirada', M, 47);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(13); doc.setTextColor(47,72,88); doc.text('Cheque Bônus ' + emp, M, 55);
   doc.setDrawColor(24,182,140); doc.setLineWidth(0.9); doc.line(M, 61, M + 28, 61);
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(19,12,14);
-  doc.text('Parabéns, ' + (d.nome.split(' ')[0] || '') + '!', M, 76);
-  var y = 88; doc.setFont('helvetica', 'normal'); doc.setFontSize(12); doc.setTextColor(30,40,48);
+  var y = 80; doc.setFont('helvetica', 'normal'); doc.setFontSize(13); doc.setTextColor(30,40,48);
   paragrafos(d).forEach(function(p){
     var lines = doc.splitTextToSize(p, W - 2 * M);
     doc.text(lines, M, y, { lineHeightFactor: 1.5 });
     y += lines.length * 6.4 + 5;
   });
-  if (y + 62 > 280){ doc.addPage(); y = 30; }
-  var by = Math.max(y + 16, 200), bw = 100, bh = 28;
+  if (y + 80 > 280){ doc.addPage(); y = 30; }
+  var by = y + 26, bw = 100, bh = 28;
   var iw = bw, ih = bw * d.sigH / d.sigW; if (ih > bh){ ih = bh; iw = bh * d.sigW / d.sigH; }
   doc.addImage(d.sigURL, 'PNG', M + (bw - iw) / 2, by + bh - ih, iw, ih);
   doc.setDrawColor(19,12,14); doc.setLineWidth(0.3); doc.line(M, by + bh + 1, M + bw, by + bh + 1);
@@ -1292,4 +1286,4 @@ init();
 </script>
 </body>
 </html>
-<!-- build 1793825374 -->
+<!-- build 1793965833 -->
