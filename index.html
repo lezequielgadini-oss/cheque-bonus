@@ -1127,7 +1127,7 @@ function impTela(){
   $('#imp').innerHTML = '<div class="stack"><div class="msg info">Arquivo: ' + esc(S.imp.arq) + ' (aba ' + esc(S.imp.aba) + ', ' + S.imp.rows.length + ' linhas)</div>' +
     '<div class="row">' + sel('m-cpf', 'Coluna do CPF', m.cpf, false) + sel('m-nome', 'Coluna do nome', m.nome, false) + sel('m-valor', 'Coluna do valor do bônus', m.valor, true) + '</div>' +
     '<div id="resumo"></div>' +
-    (S.papel === 'admin' ? '<label class="chk"><input type="checkbox" id="substituir"> Apagar a base atual antes de importar (substitui tudo)</label>' : '<div class="msg info">Clientes com o mesmo CPF são atualizados e novos são adicionados. Ninguém é apagado.</div>') +
+    (S.papel === 'admin' ? '<label class="chk"><input type="checkbox" id="substituir"> ZERAR o sistema antes de importar: apaga todos os clientes, check-ins, vans e documentos gerados</label><div id="zerar-box" style="display:none"><label for="zerar-conf">Para confirmar, digite ZERAR</label><input id="zerar-conf" type="text" autocomplete="off" placeholder="ZERAR"></div>' : '<div class="msg info">Clientes com o mesmo CPF são atualizados e novos são adicionados. Ninguém é apagado.</div>') +
     '<button class="btn" id="importar">Importar</button><div id="imp-msg"></div></div>';
   function atualizar(){
     S.imp.map = { cpf: $('#m-cpf').value, nome: $('#m-nome').value, valor: $('#m-valor').value };
@@ -1138,16 +1138,27 @@ function impTela(){
     $('#importar').disabled = !p.validos.length;
   }
   ['m-cpf', 'm-nome', 'm-valor'].forEach(function(id){ $('#' + id).addEventListener('change', atualizar); });
-  if ($('#substituir')) $('#substituir').addEventListener('change', function(){ $('#importar').textContent = this.checked ? 'Apagar a base e importar' : 'Importar'; });
+  if ($('#substituir')) $('#substituir').addEventListener('change', function(){ $('#importar').textContent = this.checked ? 'Zerar tudo e importar' : 'Importar'; $('#zerar-box').style.display = this.checked ? 'block' : 'none'; });
   $('#importar').addEventListener('click', importar);
   atualizar();
 }
 async function importar(){
   var btn = $('#importar'), out = $('#imp-msg'), p = processarImp(), subst = !!($('#substituir') && $('#substituir').checked) && S.papel === 'admin';
+  if (subst && ($('#zerar-conf').value || '').trim().toUpperCase() !== 'ZERAR'){ out.innerHTML = msg('Digite ZERAR no campo de confirmação para apagar tudo e importar.', 'warn'); return; }
   btn.disabled = true; out.innerHTML = msg('Importando...', 'info');
   try {
     if (subst){
-      var del = await S.sb.from('clientes').delete().eq('manual', false);
+      out.innerHTML = msg('Apagando arquivos dos documentos...', 'info');
+      var ds = await S.sb.from('documentos_bonus').select('pdf_path,assinatura_path');
+      if (ds.error) throw ds.error;
+      var caminhos = [];
+      (ds.data || []).forEach(function(d){ if (d.pdf_path) caminhos.push(d.pdf_path); if (d.assinatura_path) caminhos.push(d.assinatura_path); });
+      for (var j = 0; j < caminhos.length; j += 100){
+        var rm = await S.sb.storage.from(BUCKET).remove(caminhos.slice(j, j + 100));
+        if (rm.error) throw rm.error;
+      }
+      out.innerHTML = msg('Zerando o sistema...', 'info');
+      var del = await S.sb.rpc('zerar_evento');
       if (del.error) throw del.error;
     }
     for (var i = 0; i < p.validos.length; i += 500){
@@ -1375,4 +1386,4 @@ init();
 </script>
 </body>
 </html>
-<!-- build 1793999581 -->
+<!-- build 1794000292 -->
