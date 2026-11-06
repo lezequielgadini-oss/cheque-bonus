@@ -157,6 +157,12 @@ code{background:var(--soft);padding:1px 6px;border-radius:5px;font-size:.88em}
 ol.passos{margin:0;padding-left:20px;display:grid;gap:8px}
 .toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:700;z-index:50;max-width:90vw}
 @media (prefers-reduced-motion:no-preference){.card{transition:box-shadow .2s}}
+
+.dprog{margin:4px 0 12px}.dprog-top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px}
+.btrk{display:block;flex:1;height:10px;background:#e6efec;border-radius:6px;overflow:hidden}.btrk.big{height:16px}.btrk i{display:block;height:100%;border-radius:6px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:12px 0}
+.dcard{border:1px solid #dbe6e2;border-radius:12px;padding:12px 14px;background:#fff}.dcard h4{margin:0 0 10px;font-size:14px}
+.brow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.blab{width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bval{min-width:64px;text-align:right}.bval small{color:#6b7c78}
 </style>
 </head>
 <body>
@@ -483,9 +489,9 @@ function linhaAt(x){
   if (x.manual) tags += '<span class="tag manual">Cadastro manual</span>';
   if (x.doc_em) tags += '<span class="tag etapa-van">Documento gerado ' + fmtHora(x.doc_em) + '</span>';
   else if (sem) tags += '<span class="tag">Sem check-in</span>';
-  var corr = campoBase(x, 'corretor') || (x.corretor ? String(x.corretor).trim() : ''), prosp = campoBase(x, 'prospecto');
+  var corr = campoBase(x, 'corretor') || (x.corretor ? String(x.corretor).trim() : ''), prosp = campoBase(x, 'prospecto'), pastas = campoBase(x, 'pasta');
   return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x, true)) + '</span>' +
-    '<span style="display:block;margin-top:2px"><b style="display:inline">NOME DO CORRETOR:</b> ' + (corr ? esc(corr) : '-') + '</span><span style="display:block"><b style="display:inline">NÚMERO DO PROSPECTO:</b> ' + (prosp ? esc(prosp) : '-') + '</span></div>' +
+    '<span style="display:block;margin-top:2px"><b style="display:inline">NOME DO CORRETOR:</b> ' + (corr ? esc(corr) : '-') + '</span><span style="display:block"><b style="display:inline">NÚMERO DO PROSPECTO:</b> ' + (prosp ? esc(prosp) : '-') + '</span><span style="display:block"><b style="display:inline">PASTAS:</b> ' + (pastas ? esc(pastas) : '-') + '</span></div>' +
     '<div class="acoes">' + tags + '<button class="btn" data-gerar=""' + esc(x.id) + '"' + (bloq ? ' disabled title="Aguardando check-in na recepção"' : '') + '>' + (x.doc_em ? 'Gerar novamente' : 'GERAR DOCUMENTO') + '</button></div></div>';
 }
 function abrirManual(boxSel, nomeInicial, aoCriar){
@@ -515,7 +521,7 @@ function renderBusca(){
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:flex-end"><div class="grow"><h2>Atendimento</h2>' +
     '<p class="muted" style="margin:4px 0 0">Quem já fez check-in aparece na lista abaixo. Para outro cliente, busque pelo nome (basta o primeiro) ou pelo CPF.</p></div>' +
     '<button class="btn sec" id="at-manual" type="button">Cadastro manual</button></div>' +
-    '<div><label for="at-busca">Buscar por nome ou CPF</label><input id="at-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.at.termo) + '"></div>' +
+    '<div><label for="at-busca">Buscar por CPF, nome ou telefone</label><input id="at-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.at.termo) + '"></div>' +
     '<div id="at-manual-box"></div><div id="at-res"></div></section>' +
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h2 id="at-titulo">Aguardando documento</h2><button class="btn sec sm" id="at-atualizar" type="button">Atualizar</button></div>' +
     '<div id="at-fila">' + msg('Carregando...', 'info') + '</div></section>');
@@ -576,7 +582,7 @@ function desenharAt(){
     b.addEventListener('click', function(){ var k = b.getAttribute('data-at-toggle'); S.atFechada[k] = !S.atFechada[k]; desenharAt(); });
   });
   var r = S.at.res;
-  $('#at-res').innerHTML = r === null ? '' : (r.length ? '<div class="lista">' + r.map(linhaAt).join('') + '</div>' : msg('Ninguém encontrado com esse nome ou CPF. Se o cliente não está na planilha, use o Cadastro manual.', 'warn'));
+  $('#at-res').innerHTML = r === null ? '' : (r.length ? '<div class="lista">' + r.map(linhaAt).join('') + '</div>' : msg('Ninguém encontrado com esse CPF, nome ou telefone. Se o cliente não está na planilha, use o Cadastro manual.', 'warn'));
   document.querySelectorAll('[data-gerar]').forEach(function(b){
     b.addEventListener('click', function(){
       var x = S.at.mapa[b.getAttribute('data-gerar')]; if (!x) return;
@@ -888,7 +894,7 @@ function renderCheckin(){
   app.innerHTML = shell(
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:flex-end"><div class="grow"><h2>Check-in do evento</h2><p class="muted" style="margin:4px 0 0">Busque o cliente pelo nome (basta o primeiro) ou pelo CPF e toque em Fazer check-in. Pergunte quantas pessoas vão com ele no tour.' +
     (local ? ' Retirada do cheque: <b>' + esc(local) + '</b>.' : '') + '</p></div><button class="btn sec" id="ck-manual" type="button">Cadastro manual</button></div>' +
-    '<div><label for="ck-busca">Nome ou CPF</label><input id="ck-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.ck.termo) + '"></div>' +
+    '<div><label for="ck-busca">CPF, nome ou telefone</label><input id="ck-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.ck.termo) + '"></div>' +
     '<div id="ck-manual-box"></div><div id="ck-res"></div></section>' +
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h2>Lista do evento</h2><button class="btn sec sm" id="ck-atualizar" type="button">Atualizar</button></div>' +
     '<div class="cont-grid" id="ck-cont"></div><div class="subtabs" id="ck-filtros"></div><div id="ck-lista">' + msg('Carregando...', 'info') + '</div></section>');
@@ -1199,8 +1205,8 @@ function situacaoRel(x){ return x.doc_em ? 'Documento assinado' : (x.checkin_em 
 async function adminRelatorio(){
   $('#admin-corpo').innerHTML = '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h2>Relatório do evento</h2>' +
     '<div class="row"><button class="btn sec sm" id="rel-atualizar" type="button">Atualizar</button><button class="btn sm" id="rel-excel" type="button">Baixar Excel</button></div></div>' +
-    '<div class="cont-grid" id="rel-cont"></div>' +
-    '<div class="row"><div class="grow"><label for="rel-q">Filtrar por nome, CPF ou corretor</label><input id="rel-q" type="text" autocomplete="off"></div>' +
+    '<div class="cont-grid" id="rel-cont"></div><div id="rel-dash"></div>' +
+    '<div class="row"><div class="grow"><label for="rel-q">Filtrar por nome, CPF, corretor ou pastas</label><input id="rel-q" type="text" autocomplete="off"></div>' +
     '<div style="flex:0 1 240px"><label for="rel-s">Situação</label><select id="rel-s"><option value="">Todas</option><option>Documento assinado</option><option>Aguardando documento</option><option>Sem check-in</option></select></div></div>' +
     '<div id="rel-corpo">' + msg('Carregando...', 'info') + '</div></section>';
   async function carregar(){
@@ -1213,19 +1219,60 @@ async function adminRelatorio(){
     return (S.rel || []).filter(function(x){
       if (s && situacaoRel(x) !== s) return false;
       if (!q) return true;
-      return norm(x.nome).indexOf(q) >= 0 || norm(x.corretor || '').indexOf(q) >= 0 || (d && x.cpf && x.cpf.indexOf(d) >= 0);
+      return norm(x.nome).indexOf(q) >= 0 || norm(x.corretor || '').indexOf(q) >= 0 || norm(campoBase(x, 'pasta')).indexOf(q) >= 0 || (d && x.cpf && x.cpf.indexOf(d) >= 0);
     });
+  }
+  function barras(titulo, itens, total, cor){
+    if (!itens.length) return '<div class="dcard"><h4>' + esc(titulo) + '</h4><p class="muted" style="margin:0">Sem dados ainda.</p></div>';
+    var max = Math.max.apply(null, itens.map(function(i){ return i[1]; })) || 1;
+    return '<div class="dcard"><h4>' + esc(titulo) + '</h4>' + itens.map(function(i){
+      var pc = total ? Math.round(i[1] * 100 / total) : 0;
+      return '<div class="brow"><span class="blab" title="' + esc(i[0]) + '">' + esc(i[0]) + '</span><span class="btrk"><i style="width:' + Math.max(3, Math.round(i[1] * 100 / max)) + '%;background:' + (cor || '#18b68c') + '"></i></span><span class="bval">' + i[1] + (total ? ' <small>(' + pc + '%)</small>' : '') + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function contar(lista, fn){
+    var m = {}; lista.forEach(function(x){ var k = fn(x); if (k == null || k === '') return; m[k] = (m[k] || 0) + 1; });
+    return Object.keys(m).map(function(k){ return [k, m[k]]; }).sort(function(a, b){ return b[1] - a[1]; });
+  }
+  function dashboard(l){
+    var ck = l.filter(function(x){ return x.checkin_em; }), dc = l.filter(function(x){ return x.doc_em; });
+    var aguard = ck.filter(function(x){ return !x.doc_em; }).length;
+    var tour = ck.filter(function(x){ return !x.sem_tour; }), sem = ck.filter(function(x){ return x.sem_tour; });
+    var pessoas = tour.reduce(function(a, x){ return a + 1 + (Number(x.acompanhantes) || 0); }, 0);
+    var tempos = dc.filter(function(x){ return x.checkin_em; }).map(function(x){ return (new Date(x.doc_em) - new Date(x.checkin_em)) / 60000; }).filter(function(m){ return m >= 0; });
+    var medio = tempos.length ? Math.round(tempos.reduce(function(a, b){ return a + b; }, 0) / tempos.length) : null;
+    var pc = ck.length ? Math.round(dc.length * 100 / ck.length) : 0;
+    var pastasDe = function(x){ var v = campoBase(x, 'pasta'); return v ? v.toUpperCase() : 'NÃO INFORMADO'; };
+    var vans = contar(tour, function(x){ return x.van ? 'Van ' + x.van : null; }).sort(function(a, b){ return parseInt(a[0].slice(4), 10) - parseInt(b[0].slice(4), 10); });
+    var horas = contar(ck, function(x){ return String(new Date(x.checkin_em).getHours()).padStart(2, '0') + 'h'; }).sort(function(a, b){ return a[0] < b[0] ? -1 : 1; });
+    var corr = contar(ck, function(x){ var c = campoBase(x, 'corretor') || (x.corretor ? String(x.corretor).trim() : ''); return c || null; }).slice(0, 8);
+    $('#rel-dash').innerHTML =
+      '<div class="dprog"><div class="dprog-top"><b>Documentos assinados: ' + dc.length + ' de ' + ck.length + ' check-ins</b><span>' + pc + '%</span></div><div class="btrk big"><i style="width:' + pc + '%;background:#18b68c"></i></div></div>' +
+      '<div class="cont-grid">' +
+        '<div class="cont"><b>' + tour.length + '</b><span>Clientes no tour</span></div>' +
+        '<div class="cont"><b>' + pessoas + '</b><span>Pessoas nas vans (com acomp.)</span></div>' +
+        '<div class="cont"><b>' + sem.length + '</b><span>Não vão ao tour</span></div>' +
+        '<div class="cont"><b>' + (medio == null ? '-' : medio + ' min') + '</b><span>Tempo médio até assinar</span></div>' +
+        '<div class="cont"><b>' + aguard + '</b><span>Aguardando documento</span></div>' +
+      '</div>' +
+      '<div class="dgrid">' +
+        barras('Pastas (check-ins)', contar(ck, pastasDe), ck.length, '#1e756a') +
+        barras('Ocupação por van (pessoas por van)', vans.map(function(v){ var n = parseInt(v[0].slice(4), 10); return [v[0], tour.filter(function(x){ return x.van === n; }).reduce(function(a, x){ return a + 1 + (Number(x.acompanhantes) || 0); }, 0)]; }), 0, '#2f4858') +
+        barras('Check-ins por hora', horas, 0, '#4ed8b0') +
+        barras('Check-ins por corretor (top 8)', corr, ck.length, '#2d8c7e') +
+      '</div>';
   }
   function desenhar(){
     var l = S.rel || [], ck = l.filter(function(x){ return x.checkin_em; }).length, dc = l.filter(function(x){ return x.doc_em; }).length;
     var man = l.filter(function(x){ return x.manual; }).length;
     $('#rel-cont').innerHTML = '<div class="cont"><b>' + ck + '</b><span>Check-ins</span></div><div class="cont"><b>' + dc + '</b><span>Documentos assinados</span></div>' +
       '<div class="cont"><b>' + (ck - dc < 0 ? 0 : ck - dc) + '</b><span>Aguardando documento</span></div><div class="cont"><b>' + man + '</b><span>Cadastros manuais</span></div>';
+    dashboard(l);
     var v = filtrados();
     if (!v.length){ $('#rel-corpo').innerHTML = msg('Nada para mostrar ainda.', 'info'); return; }
-    $('#rel-corpo').innerHTML = '<div class="rolagem"><table class="tabela"><thead><tr><th>Cliente</th><th>CPF</th><th>Telefone</th><th>Corretor</th><th>Origem</th><th>Van</th><th>Acomp.</th><th>Check-in</th><th>Documento assinado</th><th>Tempo</th><th>Situação</th><th>Protocolo</th></tr></thead><tbody>' +
+    $('#rel-corpo').innerHTML = '<div class="rolagem"><table class="tabela"><thead><tr><th>Cliente</th><th>CPF</th><th>Telefone</th><th>Corretor</th><th>Prospecto</th><th>Pastas</th><th>Origem</th><th>Van</th><th>Acomp.</th><th>Check-in</th><th>Documento assinado</th><th>Tempo</th><th>Situação</th><th>Protocolo</th></tr></thead><tbody>' +
       v.map(function(x){
-        return '<tr><td>' + esc(titulo(x.nome)) + '</td><td>' + esc(x.cpf ? fmtCPF(x.cpf) : 'sem CPF') + '</td><td>' + esc(x.telefone || '') + '</td><td>' + esc(x.corretor || '') + '</td><td>' + (x.manual ? 'Manual' : 'Planilha') +
+        return '<tr><td>' + esc(titulo(x.nome)) + '</td><td>' + esc(x.cpf ? fmtCPF(x.cpf) : 'sem CPF') + '</td><td>' + esc(x.telefone || '') + '</td><td>' + esc(x.corretor || '') + '</td><td>' + esc(campoBase(x, 'prospecto')) + '</td><td>' + esc(campoBase(x, 'pasta')) + '</td><td>' + (x.manual ? 'Manual' : 'Planilha') +
           '</td><td>' + esc(x.sem_tour ? 'Sem tour' : (x.van ? 'Van ' + x.van : '')) + '</td><td>' + esc(x.van ? x.acompanhantes : '') + '</td><td>' + esc(fmtDH(x.checkin_em)) + '</td><td>' + esc(fmtDH(x.doc_em)) + '</td><td>' + esc(tempoEntre(x.checkin_em, x.doc_em)) + '</td><td>' + esc(situacaoRel(x)) + '</td><td>' + esc(x.protocolo || '') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
@@ -1236,7 +1283,7 @@ async function adminRelatorio(){
     var v = filtrados();
     if (!v.length){ toast('Nada para exportar'); return; }
     var linhas = v.map(function(x){
-      return { 'Cliente': titulo(x.nome), 'CPF': x.cpf ? fmtCPF(x.cpf) : 'sem CPF', 'Telefone': x.telefone || '', 'Corretor': x.corretor || '',
+      return { 'Cliente': titulo(x.nome), 'CPF': x.cpf ? fmtCPF(x.cpf) : 'sem CPF', 'Telefone': x.telefone || '', 'Corretor': x.corretor || '', 'Prospecto': campoBase(x, 'prospecto'), 'Pastas': campoBase(x, 'pasta'),
         'Origem': x.manual ? 'Inserção manual' : 'Planilha', 'Van': x.sem_tour ? 'Não vai participar do tour' : (x.van ? 'Van ' + x.van : ''), 'Acompanhantes': x.van ? x.acompanhantes : '', 'Check-in (data e hora)': fmtDH(x.checkin_em), 'Check-in feito por': x.checkin_por || '',
         'Documento assinado (data e hora)': fmtDH(x.doc_em), 'Documento gerado por': x.doc_por || '', 'Tempo entre check-in e assinatura': tempoEntre(x.checkin_em, x.doc_em),
         'Situação': situacaoRel(x), 'Protocolo': x.protocolo || '', 'Valor do bônus': x.valor_bonus != null ? Number(x.valor_bonus) : '' };
@@ -1328,4 +1375,4 @@ init();
 </script>
 </body>
 </html>
-<!-- build 1793981130 -->
+<!-- build 1793999581 -->
