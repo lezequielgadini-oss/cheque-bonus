@@ -409,18 +409,18 @@ async function entrar(user){
   if (k.data && k.data.valor) S.chk = Object.assign({ exigir: false, local: '', capacidade: 13 }, k.data.valor);
   var ea = await S.sb.rpc('existe_admin');
   S.semAdmin = ea.error ? false : ea.data === false;
-  S.view = S.papel === 'recepcao' ? 'checkin' : 'busca'; S.cliente = null;
+  S.view = 'busca'; S.cliente = null;
   render();
 }
 function sair(){ S.sb.auth.signOut(); }
 
 /* ---------------- estrutura geral ---------------- */
 function shell(inner){
-  var aba = S.view === 'docs' ? 'docs' : (S.view === 'admin' ? 'admin' : (S.view === 'checkin' ? 'checkin' : (S.view === 'vans' ? 'vans' : 'busca')));
+  var aba = S.view === 'docs' ? 'docs' : (S.view === 'admin' ? 'admin' : (S.view === 'checkin' ? 'checkin' : (S.view === 'vans' ? 'vans' : (S.view === 'base' ? 'base' : 'busca'))));
   function t(id, nome){ return '<button data-nav="' + id + '"' + (aba === id ? ' aria-current="page"' : '') + '>' + nome + '</button>'; }
   return '<header class="top"><div class="wrap topin">' +
     '<div class="brand">' + mosaico(9, 30) + '<div><b>ENTREGA DE CHEQUES EMAIS</b></div></div>' +
-    '<nav class="tabs" aria-label="Seções">' + (S.papel === 'recepcao' ? t('checkin', 'Check-in') + t('vans', 'Vans') : t('busca', 'Atendimento') + (S.papel === 'admin' ? t('checkin', 'Check-in') + t('vans', 'Vans') : '') + t('docs', 'Documentos') + (S.papel === 'admin' ? t('admin', 'Administração') : '')) + '</nav>' +
+    '<nav class="tabs" aria-label="Seções">' + (t('busca', 'Atendimento') + t('checkin', 'Check-in') + t('vans', 'Vans') + t('docs', 'Documentos') + (S.papel === 'admin' ? t('admin', 'Administração') : t('base', 'Base de clientes'))) + '</nav>' +
     '<div class="who"><span title="' + esc(S.user.email) + '">' + esc(S.user.email) + '</span><button class="ghost" id="sair">Sair</button></div>' +
     '</div></header><main class="wrap">' + bannerAdmin() + inner + '</main>';
 }
@@ -450,9 +450,9 @@ function ligarShell(){
 function render(){
   clearTimeout(timerCk);
   document.body.classList.remove('modo-cliente');
-  if (S.papel === 'recepcao'){ if (S.view !== 'vans') S.view = 'checkin'; return S.view === 'vans' ? renderVans() : renderCheckin(); }
-  if (S.view === 'vans' && S.papel === 'admin') return renderVans();
-  if (S.view === 'checkin' && S.papel === 'admin') return renderCheckin();
+  if (S.view === 'vans') return renderVans();
+  if (S.view === 'checkin') return renderCheckin();
+  if (S.view === 'base') return renderBaseUsuario();
   if (S.view === 'busca') return renderBusca();
   if (S.view === 'doc') return renderDoc();
   if (S.view === 'ok') return renderOk();
@@ -1029,13 +1029,18 @@ function renderAdmin(){
   else if (S.adminTab === 'relatorio') adminRelatorio();
   else adminUsuarios();
 }
+function renderBaseUsuario(){
+  app.innerHTML = shell('<div id="admin-corpo"></div>');
+  ligarShell();
+  adminBase();
+}
 async function adminBase(){
   $('#admin-corpo').innerHTML = '<section class="card stack"><h2>Base de clientes</h2><div id="contagem">' + msg('Contando...', 'info') + '</div>' +
     '<div><label for="arquivo">Planilha do Excel (.xlsx, .xls ou .csv)</label><input id="arquivo" type="file" accept=".xlsx,.xls,.csv"></div>' +
     '<p class="muted" style="margin:0">A planilha precisa ter uma coluna com o CPF e outra com o nome. Uma coluna de valor do bônus é opcional. Todas as outras colunas ficam disponíveis na tela de busca.</p>' +
     '<div id="imp"></div></section>';
-  var n = await S.sb.from('clientes').select('id', { count: 'exact', head: true });
-  $('#contagem').innerHTML = n.error ? msg('Não foi possível contar: ' + traduzErro(n.error), 'err') : msg('Clientes na base: ' + (n.count || 0), 'info');
+  var n = await S.sb.rpc('contar_clientes');
+  $('#contagem').innerHTML = n.error ? msg('Não foi possível contar: ' + traduzErro(n.error), 'err') : msg('Clientes na base: ' + (n.data || 0), 'info');
   $('#arquivo').addEventListener('change', async function(ev){
     var f = ev.target.files[0]; if (!f) return;
     try {
@@ -1074,7 +1079,7 @@ function impTela(){
   $('#imp').innerHTML = '<div class="stack"><div class="msg info">Arquivo: ' + esc(S.imp.arq) + ' (aba ' + esc(S.imp.aba) + ', ' + S.imp.rows.length + ' linhas)</div>' +
     '<div class="row">' + sel('m-cpf', 'Coluna do CPF', m.cpf, false) + sel('m-nome', 'Coluna do nome', m.nome, false) + sel('m-valor', 'Coluna do valor do bônus', m.valor, true) + '</div>' +
     '<div id="resumo"></div>' +
-    '<label class="chk"><input type="checkbox" id="substituir"> Apagar a base atual antes de importar (substitui tudo)</label>' +
+    (S.papel === 'admin' ? '<label class="chk"><input type="checkbox" id="substituir"> Apagar a base atual antes de importar (substitui tudo)</label>' : '<div class="msg info">Clientes com o mesmo CPF são atualizados e novos são adicionados. Ninguém é apagado.</div>') +
     '<button class="btn" id="importar">Importar</button><div id="imp-msg"></div></div>';
   function atualizar(){
     S.imp.map = { cpf: $('#m-cpf').value, nome: $('#m-nome').value, valor: $('#m-valor').value };
@@ -1085,12 +1090,12 @@ function impTela(){
     $('#importar').disabled = !p.validos.length;
   }
   ['m-cpf', 'm-nome', 'm-valor'].forEach(function(id){ $('#' + id).addEventListener('change', atualizar); });
-  $('#substituir').addEventListener('change', function(){ $('#importar').textContent = this.checked ? 'Apagar a base e importar' : 'Importar'; });
+  if ($('#substituir')) $('#substituir').addEventListener('change', function(){ $('#importar').textContent = this.checked ? 'Apagar a base e importar' : 'Importar'; });
   $('#importar').addEventListener('click', importar);
   atualizar();
 }
 async function importar(){
-  var btn = $('#importar'), out = $('#imp-msg'), p = processarImp(), subst = $('#substituir').checked;
+  var btn = $('#importar'), out = $('#imp-msg'), p = processarImp(), subst = !!($('#substituir') && $('#substituir').checked) && S.papel === 'admin';
   btn.disabled = true; out.innerHTML = msg('Importando...', 'info');
   try {
     if (subst){
@@ -1098,13 +1103,13 @@ async function importar(){
       if (del.error) throw del.error;
     }
     for (var i = 0; i < p.validos.length; i += 500){
-      var up = await S.sb.from('clientes').upsert(p.validos.slice(i, i + 500), { onConflict: 'cpf' });
+      var up = await S.sb.rpc('importar_clientes', { p_lote: p.validos.slice(i, i + 500) });
       if (up.error) throw up.error;
       out.innerHTML = msg('Importando... ' + Math.min(i + 500, p.validos.length) + ' de ' + p.validos.length, 'info');
     }
     out.innerHTML = msg('Importação concluída: ' + p.validos.length + ' clientes.', 'ok');
-    var n = await S.sb.from('clientes').select('id', { count: 'exact', head: true });
-    if (!n.error) $('#contagem').innerHTML = msg('Clientes na base: ' + (n.count || 0), 'info');
+    var n = await S.sb.rpc('contar_clientes');
+    if (!n.error) $('#contagem').innerHTML = msg('Clientes na base: ' + (n.data || 0), 'info');
   } catch (e){ out.innerHTML = msg('Falha na importação: ' + traduzErro(e), 'err'); }
   btn.disabled = false;
 }
@@ -1200,14 +1205,13 @@ async function adminRelatorio(){
   });
   carregar();
 }
-function papelNome(p){ return p === 'admin' ? 'Administrador' : (p === 'recepcao' ? 'Recepção' : 'Operador'); }
+function papelNome(p){ return p === 'admin' ? 'Administrador' : 'Usuário'; }
 async function adminUsuarios(){
   $('#admin-corpo').innerHTML = '<section class="card stack"><h2>Novo usuário</h2>' +
     '<div class="row"><div class="grow"><label for="u-email">E-mail</label><input id="u-email" type="email" autocomplete="off"></div>' +
     '<div class="grow"><label for="u-senha">Senha (mínimo 8 caracteres)</label><input id="u-senha" type="text" autocomplete="off" spellcheck="false"></div>' +
-    '<div style="flex:0 1 230px"><label for="u-papel">Perfil</label><select id="u-papel"><option value="operador">Operador (gera documentos)</option><option value="recepcao">Recepção (só check-in)</option></select></div>' +
     '<button class="btn sec" id="u-gerar" type="button">Gerar senha</button><button class="btn" id="u-criar" type="button">Criar usuário</button></div>' +
-    '<div id="u-msg"></div><p class="muted" style="margin:0">Operador busca clientes e gera documentos. Recepção só faz o check-in dos clientes. Nenhum dos dois acessa a administração. Anote a senha e passe para a pessoa, ela não volta a aparecer.</p></section>' +
+    '<div id="u-msg"></div><p class="muted" style="margin:0">Todo usuário comum faz check-in, controla as vans, gera documentos e atualiza a base de clientes. Só o administrador acessa Usuários, Configurações do documento, Check-in (configuração) e Relatório. Anote a senha e passe para a pessoa, ela não volta a aparecer.</p></section>' +
     '<section class="card stack"><h2>Usuários cadastrados</h2><div id="usr">' + msg('Carregando...', 'info') + '</div></section>';
   $('#u-gerar').addEventListener('click', function(){ $('#u-senha').value = gerarSenha(); });
   $('#u-criar').addEventListener('click', async function(){
@@ -1215,11 +1219,7 @@ async function adminUsuarios(){
     if (!email || senha.length < 8){ out.innerHTML = msg('Informe o e-mail e uma senha com pelo menos 8 caracteres.', 'warn'); return; }
     btn.disabled = true; out.innerHTML = msg('Criando...', 'info');
     try {
-      var novo = await chamarUsuarios({ acao: 'criar', email: email, senha: senha }), papel = $('#u-papel').value;
-      if (papel !== 'operador'){
-        var up = await S.sb.from('perfis').update({ papel: papel }).eq('id', novo.id);
-        if (up.error) throw new Error('Usuário criado, mas não foi possível definir o perfil: ' + traduzErro(up.error));
-      }
+      var novo = await chamarUsuarios({ acao: 'criar', email: email, senha: senha }), papel = 'operador';
       out.innerHTML = msg('Usuário criado: ' + email + ' (' + papelNome(papel) + '). Passe a senha para a pessoa.', 'ok');
       $('#u-email').value = ''; $('#u-senha').value = '';
       await carregarUsuarios();
@@ -1235,7 +1235,7 @@ async function carregarUsuarios(){
   box.innerHTML = '<div class="lista">' + (r.data || []).map(function(u){
     return '<div class="item"><div class="info"><b>' + esc(u.email) + '</b><span>Criado em ' + esc(new Date(u.criado_em).toLocaleDateString('pt-BR')) + '</span></div>' +
       (u.papel === 'admin' ? '<span class="tag">Administrador</span>' :
-        '<select class="sel-papel" data-id="' + esc(u.id) + '" aria-label="Perfil" style="width:auto;min-height:40px;padding:6px 10px"><option value="operador"' + (u.papel === 'operador' ? ' selected' : '') + '>Operador</option><option value="recepcao"' + (u.papel === 'recepcao' ? ' selected' : '') + '>Recepção</option></select>') +
+        '<span class="tag">Usuário</span>') +
       '<button class="btn sec sm" data-troca="' + esc(u.id) + '">Trocar senha</button>' +
       '<div class="row troca" style="display:none;width:100%"><div class="grow"><label>Nova senha (mínimo 8 caracteres)</label><input type="text" class="nova-senha" autocomplete="off" spellcheck="false"></div>' +
       '<button class="btn sec sm" data-gera="1" type="button">Gerar senha</button><button class="btn sm" data-salva="' + esc(u.id) + '" type="button">Salvar senha</button><div class="troca-msg" style="width:100%"></div></div></div>';
@@ -1286,4 +1286,4 @@ init();
 </script>
 </body>
 </html>
-<!-- build 1793965833 -->
+<!-- build 1793969756 -->
