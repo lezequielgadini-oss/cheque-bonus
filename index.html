@@ -496,7 +496,7 @@ function linhaAt(x){
   var corr = campoBase(x, 'corretor') || (x.corretor ? String(x.corretor).trim() : ''), prosp = campoBase(x, 'prospecto'), pastas = campoBase(x, 'pasta');
   return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x, true)) + '</span>' +
     '<span style="display:block;margin-top:2px"><b style="display:inline">NOME DO CORRETOR:</b> ' + (corr ? esc(corr) : '-') + '</span><span style="display:block"><b style="display:inline">NÚMERO DO PROSPECTO:</b> ' + (prosp ? esc(prosp) : '-') + '</span><span style="display:block"><b style="display:inline">PASTAS:</b> ' + (pastas ? esc(pastas) : '-') + '</span></div>' +
-    '<div class="acoes">' + tags + (leitor() ? '' : '<button class="btn" data-gerar=""' + esc(x.id) + '"' + (bloq ? ' disabled title="Aguardando check-in na recepção"' : '') + '>' + (x.doc_em ? 'Gerar novamente' : 'GERAR DOCUMENTO') + '</button>') + '</div></div>';
+    '<div class="acoes">' + tags + (leitor() ? '' : '<button class="btn" data-gerar="' + esc(x.id) + '"' + (bloq ? ' disabled title="Aguardando check-in na recepção"' : '') + '>' + (x.doc_em ? 'Gerar novamente' : 'GERAR DOCUMENTO') + '</button>') + '</div></div>';
 }
 function abrirManual(boxSel, nomeInicial, aoCriar){
   var box = $(boxSel);
@@ -1398,4 +1398,4 @@ init();
 </script>
 </body>
 </html>
-<!-- build 1794011291 -->
+<!-- build 1794052601 -->
