@@ -421,14 +421,15 @@ async function entrar(user){
 function sair(){ S.sb.auth.signOut(); }
 
 /* ---------------- estrutura geral ---------------- */
+function leitor(){ return S.papel === 'visualizador'; }
 function shell(inner){
-  var aba = S.view === 'docs' ? 'docs' : (S.view === 'admin' ? 'admin' : (S.view === 'checkin' ? 'checkin' : (S.view === 'vans' ? 'vans' : (S.view === 'base' ? 'base' : 'busca'))));
+  var aba = S.view === 'docs' ? 'docs' : (S.view === 'relatorio' ? 'relatorio' : S.view === 'admin' ? 'admin' : (S.view === 'checkin' ? 'checkin' : (S.view === 'vans' ? 'vans' : (S.view === 'base' ? 'base' : 'busca'))));
   function t(id, nome){ return '<button data-nav="' + id + '"' + (aba === id ? ' aria-current="page"' : '') + '>' + nome + '</button>'; }
   return '<header class="top"><div class="wrap topin">' +
     '<div class="brand">' + mosaico(9, 30) + '<div><b>ENTREGA DE CHEQUES EMAIS</b></div></div>' +
-    '<nav class="tabs" aria-label="Seções">' + (t('busca', 'Atendimento') + t('checkin', 'Check-in') + t('vans', 'Vans') + t('docs', 'Documentos') + (S.papel === 'admin' ? t('admin', 'Administração') : t('base', 'Base de clientes'))) + '</nav>' +
+    '<nav class="tabs" aria-label="Seções">' + (t('busca', 'Atendimento') + t('checkin', 'Check-in') + t('vans', 'Vans') + t('docs', 'Documentos') + (S.papel === 'admin' ? t('admin', 'Administração') : (leitor() ? t('relatorio', 'Relatório') : t('base', 'Base de clientes')))) + '</nav>' +
     '<div class="who"><span title="' + esc(S.user.email) + '">' + esc(S.user.email) + '</span><button class="ghost" id="sair">Sair</button></div>' +
-    '</div></header><main class="wrap">' + bannerAdmin() + inner + '</main>';
+    '</div></header><main class="wrap">' + (leitor() ? '<div class="msg info">Acesso somente para visualização. Você pode consultar tudo, mas não pode alterar nada.</div>' : '') + bannerAdmin() + inner + '</main>';
 }
 function bannerAdmin(){
   if (!S.semAdmin) return '';
@@ -456,6 +457,9 @@ function ligarShell(){
 function render(){
   clearTimeout(timerCk);
   document.body.classList.remove('modo-cliente');
+  if (leitor() && ['doc', 'ok', 'base', 'admin'].indexOf(S.view) >= 0) S.view = 'busca';
+  if (S.view === 'relatorio' && S.papel !== 'admin' && !leitor()) S.view = 'busca';
+  if (S.view === 'relatorio'){ app.innerHTML = shell('<div id="admin-corpo"></div>'); ligarShell(); return adminRelatorio(); }
   if (S.view === 'vans') return renderVans();
   if (S.view === 'checkin') return renderCheckin();
   if (S.view === 'base') return renderBaseUsuario();
@@ -492,7 +496,7 @@ function linhaAt(x){
   var corr = campoBase(x, 'corretor') || (x.corretor ? String(x.corretor).trim() : ''), prosp = campoBase(x, 'prospecto'), pastas = campoBase(x, 'pasta');
   return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x, true)) + '</span>' +
     '<span style="display:block;margin-top:2px"><b style="display:inline">NOME DO CORRETOR:</b> ' + (corr ? esc(corr) : '-') + '</span><span style="display:block"><b style="display:inline">NÚMERO DO PROSPECTO:</b> ' + (prosp ? esc(prosp) : '-') + '</span><span style="display:block"><b style="display:inline">PASTAS:</b> ' + (pastas ? esc(pastas) : '-') + '</span></div>' +
-    '<div class="acoes">' + tags + '<button class="btn" data-gerar=""' + esc(x.id) + '"' + (bloq ? ' disabled title="Aguardando check-in na recepção"' : '') + '>' + (x.doc_em ? 'Gerar novamente' : 'GERAR DOCUMENTO') + '</button></div></div>';
+    '<div class="acoes">' + tags + (leitor() ? '' : '<button class="btn" data-gerar=""' + esc(x.id) + '"' + (bloq ? ' disabled title="Aguardando check-in na recepção"' : '') + '>' + (x.doc_em ? 'Gerar novamente' : 'GERAR DOCUMENTO') + '</button>') + '</div></div>';
 }
 function abrirManual(boxSel, nomeInicial, aoCriar){
   var box = $(boxSel);
@@ -520,7 +524,7 @@ function renderBusca(){
   app.innerHTML = shell(
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:flex-end"><div class="grow"><h2>Atendimento</h2>' +
     '<p class="muted" style="margin:4px 0 0">Quem já fez check-in aparece na lista abaixo. Para outro cliente, busque pelo nome (basta o primeiro) ou pelo CPF.</p></div>' +
-    '<button class="btn sec" id="at-manual" type="button">Cadastro manual</button></div>' +
+    (leitor() ? '' : '<button class="btn sec" id="at-manual" type="button">Cadastro manual</button>') + '</div>' +
     '<div><label for="at-busca">Buscar por CPF, nome ou telefone</label><input id="at-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.at.termo) + '"></div>' +
     '<div id="at-manual-box"></div><div id="at-res"></div></section>' +
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h2 id="at-titulo">Aguardando documento</h2><button class="btn sec sm" id="at-atualizar" type="button">Atualizar</button></div>' +
@@ -533,7 +537,7 @@ function renderBusca(){
     t = setTimeout(atualizarAt, 350);
   });
   $('#at-atualizar').addEventListener('click', atualizarAt);
-  $('#at-manual').addEventListener('click', function(){
+  if ($('#at-manual')) $('#at-manual').addEventListener('click', function(){
     var tm = S.at.termo.trim();
     abrirManual('#at-manual-box', /\d/.test(tm) ? '' : tm, function(row){
       S.at.termo = row.nome; $('#at-busca').value = row.nome; toast('Cliente cadastrado manualmente'); atualizarAt();
@@ -825,7 +829,8 @@ var ROTULO_CK = { doc: 'Documento gerado', aguarda: 'Check-in feito', nao: 'Sem 
 var CLASSE_CK = { doc: 'etapa-van', aguarda: 'etapa-chegou', nao: '' };
 function linhaCk(x){
   var e = etapaCk(x), id = ' data-id="' + esc(x.cliente_id) + '"', acoes = '';
-  if (e === 'nao') acoes = '<button class="btn" data-ck="abrir"' + id + '>Fazer check-in</button>';
+  if (leitor()) acoes = '';
+  else if (e === 'nao') acoes = '<button class="btn" data-ck="abrir"' + id + '>Fazer check-in</button>';
   else if (e === 'aguarda') acoes = '<button class="btn sec sm" data-ck="editar"' + id + '>Alterar van</button><button class="btn sec sm" data-ck="desfazer_embarque"' + id + '>Desfazer check-in</button>';
   return '<div class="item"><div class="info"><b>' + esc(titulo(x.nome)) + '</b><span>' + esc(infoPessoa(x)) + '</span></div>' +
     (x.manual ? '<span class="tag manual">Cadastro manual</span>' : '') +
@@ -893,7 +898,7 @@ function renderCheckin(){
   var local = String(S.chk.local || '').trim();
   app.innerHTML = shell(
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:flex-end"><div class="grow"><h2>Check-in do evento</h2><p class="muted" style="margin:4px 0 0">Busque o cliente pelo nome (basta o primeiro) ou pelo CPF e toque em Fazer check-in. Pergunte quantas pessoas vão com ele no tour.' +
-    (local ? ' Retirada do cheque: <b>' + esc(local) + '</b>.' : '') + '</p></div><button class="btn sec" id="ck-manual" type="button">Cadastro manual</button></div>' +
+    (local ? ' Retirada do cheque: <b>' + esc(local) + '</b>.' : '') + '</p></div>' + (leitor() ? '' : '<button class="btn sec" id="ck-manual" type="button">Cadastro manual</button>') + '</div>' +
     '<div><label for="ck-busca">CPF, nome ou telefone</label><input id="ck-busca" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite pelo menos 3 letras ou números" value="' + esc(S.ck.termo) + '"></div>' +
     '<div id="ck-manual-box"></div><div id="ck-res"></div></section>' +
     '<section class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><h2>Lista do evento</h2><button class="btn sec sm" id="ck-atualizar" type="button">Atualizar</button></div>' +
@@ -906,7 +911,7 @@ function renderCheckin(){
     t = setTimeout(atualizarCk, 350);
   });
   $('#ck-atualizar').addEventListener('click', atualizarCk);
-  $('#ck-manual').addEventListener('click', function(){
+  if ($('#ck-manual')) $('#ck-manual').addEventListener('click', function(){
     var tm = S.ck.termo.trim();
     abrirManual('#ck-manual-box', /\d/.test(tm) ? '' : tm, async function(row){
       S.ck.termo = row.nome; $('#ck-busca').value = row.nome; toast('Cliente cadastrado manualmente');
@@ -1005,7 +1010,7 @@ function desenharVans(){
       (fechada ? '' : '<div class="lista">' + lista.map(function(r){
         var a = Number(r.acompanhantes) || 0;
         return '<div class="item"><div class="info"><b>' + esc(titulo(r.nome)) + '</b><span>' + (a ? '+' + a + (a === 1 ? ' acompanhante' : ' acompanhantes') : 'sem acompanhantes') + ' | ' + (1 + a) + (a ? ' pessoas' : ' pessoa') + ' | check-in ' + esc(fmtHora(r.embarque_em)) + '</span></div>' +
-          (r.manual ? '<span class="tag manual">Cadastro manual</span>' : '') + (r.doc_gerado ? '<span class="tag etapa-van">Documento gerado</span>' : '') + '<div class="acoes"><button class="btn sec sm" type="button" data-van-edit="' + esc(r.cliente_id) + '">Editar pessoas</button></div></div>';
+          (r.manual ? '<span class="tag manual">Cadastro manual</span>' : '') + (r.doc_gerado ? '<span class="tag etapa-van">Documento gerado</span>' : '') + (leitor() ? '' : '<div class="acoes"><button class="btn sec sm" type="button" data-van-edit="' + esc(r.cliente_id) + '">Editar pessoas</button></div>') + '</div>';
       }).join('') + '</div>') + '</section>';
   }
   $('#vn-cont').innerHTML = '<div class="cont"><b>' + emUso + '</b><span>Vans em uso</span></div><div class="cont"><b>' + lotadas + '</b><span>Vans lotadas</span></div><div class="cont"><b>' + pessoas + '</b><span>Pessoas nas vans</span></div>';
@@ -1305,13 +1310,14 @@ async function adminRelatorio(){
   });
   carregar();
 }
-function papelNome(p){ return p === 'admin' ? 'Administrador' : 'Usuário'; }
+function papelNome(p){ return p === 'admin' ? 'Administrador' : (p === 'visualizador' ? 'Visualizador' : 'Usuário'); }
 async function adminUsuarios(){
   $('#admin-corpo').innerHTML = '<section class="card stack"><h2>Novo usuário</h2>' +
     '<div class="row"><div class="grow"><label for="u-email">E-mail</label><input id="u-email" type="email" autocomplete="off"></div>' +
+    '<div style="flex:0 1 220px"><label for="u-papel">Tipo de acesso</label><select id="u-papel"><option value="operador">Usuário (opera o sistema)</option><option value="visualizador">Visualizador (só consulta)</option></select></div>' +
     '<div class="grow"><label for="u-senha">Senha (mínimo 8 caracteres)</label><input id="u-senha" type="text" autocomplete="off" spellcheck="false"></div>' +
     '<button class="btn sec" id="u-gerar" type="button">Gerar senha</button><button class="btn" id="u-criar" type="button">Criar usuário</button></div>' +
-    '<div id="u-msg"></div><p class="muted" style="margin:0">Todo usuário comum faz check-in, controla as vans, gera documentos e atualiza a base de clientes. Só o administrador acessa Usuários, Configurações do documento, Check-in (configuração) e Relatório. Anote a senha e passe para a pessoa, ela não volta a aparecer.</p></section>' +
+    '<div id="u-msg"></div><p class="muted" style="margin:0">O Visualizador só consulta: vê atendimento, check-in, vans, documentos e relatório, sem alterar nada. Todo usuário comum faz check-in, controla as vans, gera documentos e atualiza a base de clientes. Só o administrador acessa Usuários, Configurações do documento, Check-in (configuração) e Relatório. Anote a senha e passe para a pessoa, ela não volta a aparecer.</p></section>' +
     '<section class="card stack"><h2>Usuários cadastrados</h2><div id="usr">' + msg('Carregando...', 'info') + '</div></section>';
   $('#u-gerar').addEventListener('click', function(){ $('#u-senha').value = gerarSenha(); });
   $('#u-criar').addEventListener('click', async function(){
@@ -1319,7 +1325,13 @@ async function adminUsuarios(){
     if (!email || senha.length < 8){ out.innerHTML = msg('Informe o e-mail e uma senha com pelo menos 8 caracteres.', 'warn'); return; }
     btn.disabled = true; out.innerHTML = msg('Criando...', 'info');
     try {
-      var novo = await chamarUsuarios({ acao: 'criar', email: email, senha: senha }), papel = 'operador';
+      var novo = await chamarUsuarios({ acao: 'criar', email: email, senha: senha }), papel = $('#u-papel').value;
+      if (papel !== 'operador'){
+        var pf = await S.sb.from('perfis').select('id').ilike('email', email).maybeSingle();
+        if (!pf.data) throw new Error('Usuário criado, mas não encontrei o perfil para definir o acesso. Troque o tipo de acesso na lista abaixo.');
+        var up = await S.sb.from('perfis').update({ papel: papel }).eq('id', pf.data.id);
+        if (up.error) throw up.error;
+      }
       out.innerHTML = msg('Usuário criado: ' + email + ' (' + papelNome(papel) + '). Passe a senha para a pessoa.', 'ok');
       $('#u-email').value = ''; $('#u-senha').value = '';
       await carregarUsuarios();
@@ -1335,7 +1347,7 @@ async function carregarUsuarios(){
   box.innerHTML = '<div class="lista">' + (r.data || []).map(function(u){
     return '<div class="item"><div class="info"><b>' + esc(u.email) + '</b><span>Criado em ' + esc(new Date(u.criado_em).toLocaleDateString('pt-BR')) + '</span></div>' +
       (u.papel === 'admin' ? '<span class="tag">Administrador</span>' :
-        '<span class="tag">Usuário</span>') +
+        '<select class="sel-papel" data-id="' + esc(u.id) + '" aria-label="Tipo de acesso"><option value="operador"' + (u.papel === 'visualizador' ? '' : ' selected') + '>Usuário</option><option value="visualizador"' + (u.papel === 'visualizador' ? ' selected' : '') + '>Visualizador</option></select>') +
       '<button class="btn sec sm" data-troca="' + esc(u.id) + '">Trocar senha</button>' +
       '<div class="row troca" style="display:none;width:100%"><div class="grow"><label>Nova senha (mínimo 8 caracteres)</label><input type="text" class="nova-senha" autocomplete="off" spellcheck="false"></div>' +
       '<button class="btn sec sm" data-gera="1" type="button">Gerar senha</button><button class="btn sm" data-salva="' + esc(u.id) + '" type="button">Salvar senha</button><div class="troca-msg" style="width:100%"></div></div></div>';
@@ -1386,4 +1398,4 @@ init();
 </script>
 </body>
 </html>
-<!-- build 1794000292 -->
+<!-- build 1794011291 -->
