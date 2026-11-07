@@ -1115,6 +1115,7 @@ function processarImp(){
   var m = S.imp.map, vistos = {}, validos = [], invalidos = [], dup = 0;
   S.imp.rows.forEach(function(r, i){
     var d = onlyDigits(r[m.cpf]);
+    if (d.length > 0 && d.length < 11) d = d.padStart(11, '0'); else if (d.length === 12 || d.length === 13) d = d.padStart(14, '0');
     var nome = String(r[m.nome] == null ? '' : r[m.nome]).trim();
     if (!nome){ invalidos.push(i + 2); return; }
     var chave = d || ('sem:' + norm(nome));
@@ -1400,4 +1401,4 @@ init();
 </script>
 </body>
 </html>
-<!-- build 1794055363 -->
+<!-- build 1794056481 -->
